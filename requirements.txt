@@ -1,0 +1,2 @@
+coc.py >= 2.4.1
+discord.py >= 2.3.0
