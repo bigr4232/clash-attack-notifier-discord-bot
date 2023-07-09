@@ -3,7 +3,6 @@ from coc import utils
 import asyncio
 import keys as k
 import discord
-import os
 
 players = list()
 
