@@ -34,24 +34,33 @@ async def war_attack(attack, war):
     
     
 async def war_notifier(war):
-    asyncio.sleep(war.end_time.seconds_until - 68400)
-    for member in players:
-        print('5 hours left')
-    asyncio.sleep(7200)
-    for member in players:
-        print('3 hours left')
-    asyncio.sleep(3600)
-    for member in players:
-        print('1 and a half hours left')
-    asyncio.sleep(2400)
-    for member in players:
-        print('1 hour left')
-    asyncio.sleep(1200)
-    for member in players:
-        print('30 minutes left')
-    asyncio.sleep(600)
-    for member in players:
-        print('15 minutes left')
+    async with coc.Client() as cc:
+        if war.state != 'inWar':
+            asyncio.sleep(86400)
+        war = await cc.get_current_war(clan_tags[0])
+        asyncio.sleep(war.end_time.seconds_until - 68400)
+        for member in players:
+            print('5 hours left')
+        war = await cc.get_current_war(clan_tags[0])
+        asyncio.sleep(war.end_time.seconds_until - 7200)
+        for member in players:
+            print('3 hours left')
+        war = await cc.get_current_war(clan_tags[0])
+        asyncio.sleep(war.end_time.seconds_until - 3600)
+        for member in players:
+            print('1 and a half hours left')
+        war = await cc.get_current_war(clan_tags[0])
+        asyncio.sleep(war.end_time.seconds_until - 2400)
+        for member in players:
+            print('1 hour left')
+        war = await cc.get_current_war(clan_tags[0])
+        asyncio.sleep(war.end_time.seconds_until - 1200)
+        for member in players:
+            print('30 minutes left')
+        war = await cc.get_current_war(clan_tags[0])
+        asyncio.sleep(war.end_time.seconds_until - 600)
+        for member in players:
+            print('15 minutes left')
 
 # Initialization
 @bot.event
