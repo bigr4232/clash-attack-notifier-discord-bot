@@ -13,6 +13,7 @@ intents.message_content = True
 bot = discord.Client(intents=intents)
 managers = {}
 
+# Event for new war start. Will start the war attack notifier
 @coc.WarEvents.new_war(tags=clan_tags)
 async def new_war(war):
     print('new war registered')
@@ -21,6 +22,7 @@ async def new_war(war):
             players.append(member)
     war_notifier(war)
 
+# Event for war attack. Updates list of players who haven't attacked
 @coc.WarEvents.war_attack(tags=clan_tags)
 async def war_attack(attack, war):
     print('attack registerd')
@@ -32,7 +34,7 @@ async def war_attack(attack, war):
             if len(member.attacks) == war.attacks_per_member:
                 players.remove(member)
     
-    
+# Sends notifications to players who haven't attacked at each interval
 async def war_notifier(war):
     async with coc.Client() as cc:
         if war.state != 'inWar':
@@ -62,15 +64,14 @@ async def war_notifier(war):
         for member in players:
             print('15 minutes left')
 
-# Initialization
+# Bot init
 @bot.event
 async def on_ready():
     print("connected")
 
-
+# coc API init
 async def main():
     async with coc.EventsClient() as coc_client:
-        # Attempt to log into CoC API using your credentials.
         try:
             await coc_client.login_with_tokens(k.token)
         except coc.InvalidCredentials as error:
