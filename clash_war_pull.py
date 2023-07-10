@@ -19,7 +19,7 @@ async def new_war(war):
     for member in war.members:
         if member.clan.tag == k.nattydaddytag:
             players.append(member)
-    war_notifier()
+    war_notifier(war)
 
 @coc.WarEvents.war_attack(tags=clan_tags)
 async def war_attack(attack, war):
@@ -33,11 +33,11 @@ async def war_attack(attack, war):
                 players.remove(member)
     
     
-async def war_notifier():
-    asyncio.sleep(68400)
+async def war_notifier(war):
+    asyncio.sleep(war.end_time.seconds_until - 68400)
     for member in players:
         print('5 hours left')
-    asyncio.sleep(7200) #75600
+    asyncio.sleep(7200)
     for member in players:
         print('3 hours left')
     asyncio.sleep(3600)
