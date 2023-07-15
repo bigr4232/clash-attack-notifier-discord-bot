@@ -72,6 +72,7 @@ async def war_notifier(war):
         for member in players:
             print('15 minutes left')
 
+# Command to claim clash account. With no input of username, will use discord name from command issuer
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name', guild=discord.Object(id=int(initContent['discordGuildID'])))
 async def claimAccountCommand(ctx: discord.Interaction, clashtag:str, discordusername:str=''):
     await ctx.response.send_message("message")
