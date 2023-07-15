@@ -1,11 +1,11 @@
 import coc
 from coc import utils
 import asyncio
-import keys as k
 import discord
+import config_loader
 
 players = list()
-clan_tags = [***REMOVED***]
+clan_tags = list()
 
 # Intents and tree inits
 intents = discord.Intents.default()
@@ -17,8 +17,9 @@ managers = {}
 @coc.WarEvents.new_war(tags=clan_tags)
 async def new_war(war):
     print('new war registered')
+    content = config_loader.loadYaml()
     for member in war.members:
-        if member.clan.tag == k.nattydaddytag:
+        if member.clan.tag == content['discordChannel']:
             players.append(member)
     war_notifier(war)
 
@@ -72,8 +73,9 @@ async def on_ready():
 # coc API init
 async def main():
     async with coc.EventsClient() as coc_client:
+        content = config_loader.loadYaml()
         try:
-            await coc_client.login_with_tokens(k.token)
+            await coc_client.login_with_tokens(content['clashToken'])
         except coc.InvalidCredentials as error:
             exit(error)
         coc_client.add_clan_updates(*clan_tags)
@@ -82,10 +84,11 @@ async def main():
             new_war,
             war_attack
         )
+        clan_tags.append(content['clanTag'])
 
         # Add the client session to the bot
         bot.coc_client = coc_client
-        await bot.start(k.RyanTestBotToken)
+        await bot.start(content['discordBotToken'])
 
 
 if __name__ == "__main__":
