@@ -1,5 +1,4 @@
 import coc
-from coc import utils
 import asyncio
 import discord
 import config_loader
