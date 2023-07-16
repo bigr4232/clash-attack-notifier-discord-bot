@@ -72,16 +72,24 @@ async def war_notifier(war):
 
 # Command to claim clash account. With no input of username, will use discord name from command issuer
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name', guild=discord.Object(id=int(content['discordGuildID'])))
-async def claimAccountCommand(ctx: discord.Interaction, clashtag:str, discordusername:str=''):
-    if discordusername != '':
-        await ctx.response.send_message(f"Claiming account {clashtag} for {discordusername}")
-        config_loader.addUser(discordusername, clashtag)
-    else:
-        await ctx.response.send_message(f"Claiming account {clashtag} for {ctx.user.name}")
-        config_loader.addUser(ctx.user.name, clashtag)
+async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
+    await ctx.response.send_message(f"Claiming account {clashtag} for {ctx.user.name}")
+    config_loader.addUser(ctx.user.id, clashtag)
     global content
     content = config_loader.loadYaml()
-    
+
+
+@tree.command(name='test', description='test', guild=discord.Object(id=int(content['discordGuildID'])))
+async def testCommand(ctx: discord.Interaction):
+    await ctx.response.send_message('testing command')
+    await notifyUser(ctx)
+
+@bot.event
+async def notifyUser(ctx:discord.Interaction):
+    user = await bot.fetch_user(***REMOVED***)
+    await user.send('hello')
+    for player in players:
+        print()
 
 # Bot init
 @bot.event
@@ -104,7 +112,6 @@ async def main():
         coc_client.add_war_updates(*clan_tags)
         coc_client.add_events(
             new_war,
-            war_attack
         )
         clan_tags.append(content['clanTag'])
 
