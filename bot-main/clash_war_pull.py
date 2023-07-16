@@ -3,6 +3,7 @@ import asyncio
 import discord
 from discord import app_commands
 import config_loader
+from math import floor
 
 # Globals
 players = list()
@@ -24,49 +25,50 @@ async def new_war(war):
     for member in war.members:
         if member.clan.tag == int(content['discordChannel']):
             players.append(member)
-    war_notifier(war)
+    await war_notifier(war)
 
-# Event for war attack. Updates list of players who haven't attacked
-@coc.WarEvents.war_attack(tags=clan_tags)
-async def war_attack(attack, war):
-    print('attack registerd')
-    print(f'attack by: {attack.attacker}')
-    print(f'total attacks: {len(attack.attacker.attacks)}')
-    print(f'war attacks total: {war.attacks_per_member}')
+# Remove users who have attacked from players list
+async def removeFinishedAttackers(cc):
+    war = await cc.get_current_war(content['clanTag'])
+    for p in war.members:
+        if p.clan.tag == content['clanTag']:
+            if len(p.attacks) == war.attacks_per_member:
+                players.remove(p)
+
+# Return time in hour/min/sec as string from sec
+async def returnTime(seconds):
+    minutes = floor(seconds / 60)
+    seconds -= minutes * 60
+    hours = floor(minutes / 60)
+    minutes -= hours * 60
+    remainingTime = ''
+    if hours > 0:
+        remainingTime += str(hours) + ' hours '
+    if minutes > 0:
+        remainingTime += str(minutes) + ' minutes '
+    if seconds > 0:
+        remainingTime += str(seconds) + ' seconds '
+    remainingTime += 'remaining '
+    return remainingTime
+
+async def updateAndNotify(cc, time):
+    await removeFinishedAttackers(cc)
+    remainingTime = returnTime(time)
     for member in players:
-        if member == attack.attacker:
-            if len(member.attacks) == war.attacks_per_member:
-                players.remove(member)
-    
+        print(f'{remainingTime}')
+    war = await cc.get_current_war(clan_tags[0])
+    asyncio.sleep(war.end_time.seconds_until - time)
+
 # Sends notifications to players who haven't attacked at each interval
 async def war_notifier(war):
+    notificationIntervals = [7200, 3600, 2400, 1200, 600]
     async with coc.Client() as cc:
         if war.state != 'inWar':
             asyncio.sleep(86400)
         war = await cc.get_current_war(clan_tags[0])
         asyncio.sleep(war.end_time.seconds_until - 68400)
-        for member in players:
-            print('5 hours left')
-        war = await cc.get_current_war(clan_tags[0])
-        asyncio.sleep(war.end_time.seconds_until - 7200)
-        for member in players:
-            print('3 hours left')
-        war = await cc.get_current_war(clan_tags[0])
-        asyncio.sleep(war.end_time.seconds_until - 3600)
-        for member in players:
-            print('1 hour 30 minutes left')
-        war = await cc.get_current_war(clan_tags[0])
-        asyncio.sleep(war.end_time.seconds_until - 2400)
-        for member in players:
-            print('1 hour left')
-        war = await cc.get_current_war(clan_tags[0])
-        asyncio.sleep(war.end_time.seconds_until - 1200)
-        for member in players:
-            print('30 minutes left')
-        war = await cc.get_current_war(clan_tags[0])
-        asyncio.sleep(war.end_time.seconds_until - 600)
-        for member in players:
-            print('15 minutes left')
+        for time in notificationIntervals:
+            await updateAndNotify(cc, time)
 
 # Command to claim clash account. With no input of username, will use discord name from command issuer
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name', guild=discord.Object(id=int(content['discordGuildID'])))
