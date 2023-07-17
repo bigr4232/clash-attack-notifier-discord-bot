@@ -53,11 +53,15 @@ async def returnTime(seconds):
     remainingTime += 'remaining '
     return remainingTime
 
+# Update the players list and notify users that haven't attacked
+# wait in asyncio.sleep for amount of time passed in
 async def updateAndNotify(cc, time):
     await removeFinishedAttackers(cc)
     remainingTime = returnTime(time)
     for member in players:
-        logging.debug(f'{remainingTime}')
+        for claimedMember in config_loader['clanMembers'].keys():
+            if member.tag == claimedMember:
+                notifyUser(config_loader['clanMembers'][claimedMember], remainingTime)
     war = await cc.get_current_war(clan_tags[0])
     asyncio.sleep(war.end_time.seconds_until - time)
 
@@ -66,7 +70,7 @@ async def war_notifier(war):
     notificationIntervals = [7200, 3600, 2400, 1200, 600]
     async with coc.Client() as cc:
         if war.state != 'inWar':
-            asyncio.sleep(86400)
+            asyncio.sleep(war.end_time.seconds_until + 500)
         war = await cc.get_current_war(clan_tags[0])
         asyncio.sleep(war.end_time.seconds_until - 68400)
         for time in notificationIntervals:
@@ -80,18 +84,10 @@ async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
     global content
     content = config_loader.loadYaml()
 
-
-@tree.command(name='test', description='test', guild=discord.Object(id=int(content['discordGuildID'])))
-async def testCommand(ctx: discord.Interaction):
-    await ctx.response.send_message('testing command')
-    await notifyUser(ctx)
-
 @bot.event
-async def notifyUser(ctx:discord.Interaction):
+async def notifyUser(ctx:discord.Interaction, userid:str, remainingtime:str):
     user = await bot.fetch_user(***REMOVED***)
-    await user.send('hello')
-    for player in players:
-        print()
+    await user.send(f'{remainingtime} to get attack in')
 
 # Bot init
 @bot.event
