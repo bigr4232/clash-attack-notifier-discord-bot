@@ -19,15 +19,32 @@ bot = discord.Client(intents=intents)
 managers = {}
 tree = app_commands.CommandTree(bot)
 
+# begin calling search for war
+async def startWarSearch(cc):
+    while True:
+        await new_war(cc)
+        await asyncio.sleep(10)
+
+# not coc api event based search for war
+async def new_war(cc):
+    war = await cc.get_current_war(content['clanTag'])
+    if war.state == 'inWar':
+        players.clear()
+        for member in war.members:
+            if member.clan.tag == content['clanTag']:
+                players.append(member)
+        await war_notifier(war, cc)
+
 # Event for new war start. Will start the war attack notifier
-@coc.WarEvents.new_war(tags=clan_tags)
-async def new_war(war):
-    logging.info('new war registered')
-    players.clear()
-    for member in war.members:
-        if member.clan.tag == content['clanTag']:
-            players.append(member)
-    await war_notifier(war)
+#@coc.WarEvents.new_war(tags=clan_tags)
+#async def new_war(war):
+#    logging.info('new war registered')
+#    players.clear()
+#    for member in war.members:
+#        if member.clan.tag == content['clanTag']:
+#            players.append(member)
+#    await war_notifier(war)
+
 
 # Remove users who have attacked from players list
 async def removeFinishedAttackers(cc):
@@ -66,15 +83,14 @@ async def updateAndNotify(cc, time):
     asyncio.sleep(war.end_time.seconds_until - time)
 
 # Sends notifications to players who haven't attacked at each interval
-async def war_notifier(war):
+async def war_notifier(war, cc):
     notificationIntervals = [7200, 3600, 2400, 1200, 600]
-    async with coc.Client() as cc:
-        if war.state != 'inWar':
-            asyncio.sleep(war.end_time.seconds_until + 500)
-        war = await cc.get_current_war(clan_tags[0])
-        asyncio.sleep(war.end_time.seconds_until - 68400)
-        for time in notificationIntervals:
-            await updateAndNotify(cc, time)
+    #if war.state != 'inWar':
+    #    asyncio.sleep(war.end_time.seconds_until + 500)
+    #war = await cc.get_current_war(clan_tags[0])
+    asyncio.sleep(war.end_time.seconds_until - 68400)
+    for time in notificationIntervals:
+        await updateAndNotify(cc, time)
 
 # Command to claim clash account. With no input of username, will use discord name from command issuer
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name', guild=discord.Object(id=int(content['discordGuildID'])))
@@ -83,6 +99,15 @@ async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
     config_loader.addUser(ctx.user.id, clashtag)
     global content
     content = config_loader.loadYaml()
+
+# Command to sync new slash commands
+@tree.command(name='sync-commands', description='command to sync new slash commands', guild=discord.Object(id=int(content['discordGuildID'])))
+async def syncCommands(ctx: discord.Interaction):
+    if ctx.user.id == int(content['discordOwnerID']):
+        await ctx.response.send_message('Commands synced')
+        await tree.sync(guild=discord.Object(id=int(content['discordGuildID'])))
+    else:
+        await ctx.response.send_message('This command is only for the server owner')
 
 # Send dm to user to get attack in
 @bot.event
@@ -95,24 +120,25 @@ async def notifyUser(ctx:discord.Interaction, userid:int, remainingtime:str):
 async def on_ready():
     global commandsSynced
     if commandsSynced == False:
-        await tree.sync(guild=discord.Object(id=int(content['discordGuildID'])))
+        #await tree.sync(guild=discord.Object(id=int(content['discordGuildID'])))
         commandsSynced = True
         logging.info('commands synced')
     logging.info('ready')
+    await startWarSearch(bot.coc_client)
 
 # coc API init
 async def main():
-    async with coc.EventsClient() as coc_client:
+    async with coc.Client() as coc_client:
         try:
             await coc_client.login_with_tokens(content['clashToken'])
         except coc.InvalidCredentials as error:
             exit(error)
-        coc_client.add_clan_updates(*clan_tags)
-        coc_client.add_war_updates(*clan_tags)
-        coc_client.add_events(
-            new_war,
-        )
-        clan_tags.append(content['clanTag'])
+        #coc_client.add_clan_updates(*clan_tags)
+        #coc_client.add_war_updates(*clan_tags)
+        #coc_client.add_events(
+        #    new_war,
+        #)
+        #clan_tags.append(content['clanTag'])
 
         # Add the client session to the bot
         bot.coc_client = coc_client
