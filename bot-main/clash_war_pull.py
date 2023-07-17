@@ -23,7 +23,7 @@ tree = app_commands.CommandTree(bot)
 async def startWarSearch(cc):
     while True:
         await new_war(cc)
-        await asyncio.sleep(10)
+        await asyncio.sleep(600)
 
 # not coc api event based search for war
 async def new_war(cc):
@@ -82,6 +82,7 @@ async def updateAndNotify(cc, time):
                 notifyUser(content['clanMembers'][claimedMember], remainingTime)
                 notifiedPlayers.add(content['clanMembers'][claimedMember])
     war = await cc.get_current_war(clan_tags[0])
+    notifiedPlayers.clear()
     asyncio.sleep(war.end_time.seconds_until - time)
 
 # Sends notifications to players who haven't attacked at each interval
