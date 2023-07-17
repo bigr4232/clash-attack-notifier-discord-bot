@@ -84,6 +84,7 @@ async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
     global content
     content = config_loader.loadYaml()
 
+# Send dm to user to get attack in
 @bot.event
 async def notifyUser(ctx:discord.Interaction, userid:str, remainingtime:str):
     user = await bot.fetch_user(***REMOVED***)
