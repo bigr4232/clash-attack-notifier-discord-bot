@@ -86,8 +86,8 @@ async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
 
 # Send dm to user to get attack in
 @bot.event
-async def notifyUser(ctx:discord.Interaction, userid:str, remainingtime:str):
-    user = await bot.fetch_user(***REMOVED***)
+async def notifyUser(ctx:discord.Interaction, userid:int, remainingtime:str):
+    user = await bot.fetch_user(userid)
     await user.send(f'{remainingtime} to get attack in')
 
 # Bot init
