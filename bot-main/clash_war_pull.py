@@ -4,6 +4,7 @@ import discord
 from discord import app_commands
 import config_loader
 from math import floor
+import logging
 
 # Globals
 players = list()
@@ -21,7 +22,7 @@ tree = app_commands.CommandTree(bot)
 # Event for new war start. Will start the war attack notifier
 @coc.WarEvents.new_war(tags=clan_tags)
 async def new_war(war):
-    print('new war registered')
+    logging.info('new war registered')
     players.clear()
     for member in war.members:
         if member.clan.tag == int(content['discordChannel']):
@@ -56,7 +57,7 @@ async def updateAndNotify(cc, time):
     await removeFinishedAttackers(cc)
     remainingTime = returnTime(time)
     for member in players:
-        print(f'{remainingTime}')
+        logging.debug(f'{remainingTime}')
     war = await cc.get_current_war(clan_tags[0])
     asyncio.sleep(war.end_time.seconds_until - time)
 
@@ -99,8 +100,8 @@ async def on_ready():
     if commandsSynced == False:
         await tree.sync(guild=discord.Object(id=int(content['discordGuildID'])))
         commandsSynced = True
-        print('commands synced')
-    print('ready')
+        logging.info('commands synced')
+    logging.info('ready')
 
 # coc API init
 async def main():
