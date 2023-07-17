@@ -91,6 +91,9 @@ async def war_notifier(war, cc):
     asyncio.sleep(war.end_time.seconds_until - 68400)
     for time in notificationIntervals:
         await updateAndNotify(cc, time)
+    await asyncio.sleep(2400)
+    await startWarSearch(cc)
+    
 
 # Command to claim clash account. With no input of username, will use discord name from command issuer
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name', guild=discord.Object(id=int(content['discordGuildID'])))
