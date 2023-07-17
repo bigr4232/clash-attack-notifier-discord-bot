@@ -22,6 +22,7 @@ tree = app_commands.CommandTree(bot)
 @coc.WarEvents.new_war(tags=clan_tags)
 async def new_war(war):
     print('new war registered')
+    players.clear()
     for member in war.members:
         if member.clan.tag == int(content['discordChannel']):
             players.append(member)
