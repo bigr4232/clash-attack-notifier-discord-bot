@@ -25,7 +25,7 @@ async def new_war(war):
     logging.info('new war registered')
     players.clear()
     for member in war.members:
-        if member.clan.tag == int(content['discordChannel']):
+        if member.clan.tag == content['clanTag']:
             players.append(member)
     await war_notifier(war)
 
@@ -59,9 +59,9 @@ async def updateAndNotify(cc, time):
     await removeFinishedAttackers(cc)
     remainingTime = returnTime(time)
     for member in players:
-        for claimedMember in config_loader['clanMembers'].keys():
+        for claimedMember in content['clanMembers'].keys():
             if member.tag == claimedMember:
-                notifyUser(config_loader['clanMembers'][claimedMember], remainingTime)
+                notifyUser(content['clanMembers'][claimedMember], remainingTime)
     war = await cc.get_current_war(clan_tags[0])
     asyncio.sleep(war.end_time.seconds_until - time)
 
@@ -79,7 +79,7 @@ async def war_notifier(war):
 # Command to claim clash account. With no input of username, will use discord name from command issuer
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name', guild=discord.Object(id=int(content['discordGuildID'])))
 async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
-    await ctx.response.send_message(f"Claiming account {clashtag} for {ctx.user.name}")
+    await ctx.response.send_message(f"Claiming account {clashtag} for {ctx.user.name}", delete_after=300)
     config_loader.addUser(ctx.user.id, clashtag)
     global content
     content = config_loader.loadYaml()
