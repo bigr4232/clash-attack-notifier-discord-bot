@@ -75,10 +75,12 @@ async def returnTime(seconds):
 async def updateAndNotify(cc, time):
     await removeFinishedAttackers(cc)
     remainingTime = returnTime(time)
+    notifiedPlayers = set()
     for member in players:
         for claimedMember in content['clanMembers'].keys():
-            if member.tag == claimedMember:
+            if member.tag == claimedMember and content['clanMembers'][claimedMember] not in notifiedPlayers:
                 notifyUser(content['clanMembers'][claimedMember], remainingTime)
+                notifiedPlayers.add(content['clanMembers'][claimedMember])
     war = await cc.get_current_war(clan_tags[0])
     asyncio.sleep(war.end_time.seconds_until - time)
 
