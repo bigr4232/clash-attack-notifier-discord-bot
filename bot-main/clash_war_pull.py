@@ -24,15 +24,18 @@ async def startWarSearch(cc):
     while True:
         await new_war(cc)
         await asyncio.sleep(600)
+        logging.debug('Checking war status')
 
 # not coc api event based search for war
 async def new_war(cc):
     war = await cc.get_current_war(content['clanTag'])
     if war.state == 'inWar':
+        logging.debug('adding players to list')
         players.clear()
         for member in war.members:
             if member.clan.tag == content['clanTag']:
                 players.append(member)
+        logging.debug('starting notifier')
         await war_notifier(war, cc)
 
 # Event for new war start. Will start the war attack notifier
@@ -48,6 +51,7 @@ async def new_war(cc):
 
 # Remove users who have attacked from players list
 async def removeFinishedAttackers(cc):
+    logging.debug('remove users who have attacked')
     war = await cc.get_current_war(content['clanTag'])
     for p in war.members:
         if p.clan.tag == content['clanTag']:
@@ -68,14 +72,17 @@ async def returnTime(seconds):
     if seconds > 0:
         remainingTime += str(seconds) + ' seconds '
     remainingTime += 'remaining '
+    logging.debug(f'time: {remainingTime}')
     return remainingTime
 
 # Update the players list and notify users that haven't attacked
 # wait in asyncio.sleep for amount of time passed in
 async def updateAndNotify(cc, time):
+    logging.debug(f'notify with time {time}')
     await removeFinishedAttackers(cc)
     remainingTime = returnTime(time)
     notifiedPlayers = set()
+    logging.debug('send notifications')
     for member in players:
         for claimedMember in content['clanMembers'].keys():
             if member.tag == claimedMember and content['clanMembers'][claimedMember] not in notifiedPlayers:
@@ -83,6 +90,7 @@ async def updateAndNotify(cc, time):
                 notifiedPlayers.add(content['clanMembers'][claimedMember])
     war = await cc.get_current_war(clan_tags[0])
     notifiedPlayers.clear()
+    logging.debug('waiting till next notification interval')
     asyncio.sleep(war.end_time.seconds_until - time)
 
 # Sends notifications to players who haven't attacked at each interval
@@ -91,6 +99,7 @@ async def war_notifier(war, cc):
     #if war.state != 'inWar':
     #    asyncio.sleep(war.end_time.seconds_until + 500)
     #war = await cc.get_current_war(clan_tags[0])
+    logging.debug('initial countdown to 5 hours')
     asyncio.sleep(war.end_time.seconds_until - 68400)
     for time in notificationIntervals:
         await updateAndNotify(cc, time)
