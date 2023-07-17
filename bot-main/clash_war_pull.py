@@ -118,7 +118,7 @@ async def main():
         bot.coc_client = coc_client
         await bot.start(content['discordBotToken'])
 
-
+# Main to run main repeatedly with asyncio
 if __name__ == "__main__":
     try:
         asyncio.run(main())
