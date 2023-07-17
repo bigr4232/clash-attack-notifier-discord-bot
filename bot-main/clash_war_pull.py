@@ -107,10 +107,10 @@ async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
 @tree.command(name='sync-commands', description='command to sync new slash commands', guild=discord.Object(id=int(content['discordGuildID'])))
 async def syncCommands(ctx: discord.Interaction):
     if ctx.user.id == int(content['discordOwnerID']):
-        await ctx.response.send_message('Commands synced')
+        await ctx.response.send_message('Commands synced', delete_after=30)
         await tree.sync(guild=discord.Object(id=int(content['discordGuildID'])))
     else:
-        await ctx.response.send_message('This command is only for the server owner')
+        await ctx.response.send_message('This command is only for the server owner', delete_after=30)
 
 # Send dm to user to get attack in
 @bot.event
