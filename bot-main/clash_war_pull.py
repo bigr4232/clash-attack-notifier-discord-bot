@@ -10,7 +10,6 @@ import logging
 players = list()
 clan_tags = list()
 content = config_loader.loadYaml()
-commandsSynced = False
 
 # Intents and tree inits
 intents = discord.Intents.default()
@@ -133,11 +132,6 @@ async def notifyUser(ctx:discord.Interaction, userid:int, remainingtime:str):
 # Bot init
 @bot.event
 async def on_ready():
-    global commandsSynced
-    if commandsSynced == False:
-        #await tree.sync(guild=discord.Object(id=int(content['discordGuildID'])))
-        commandsSynced = True
-        logging.info('commands synced')
     logging.info('ready')
     await startWarSearch(bot.coc_client)
 
