@@ -60,6 +60,7 @@ async def removeFinishedAttackers(cc):
         if p.clan.tag == content['clanTag']:
             if len(p.attacks) == war.attacks_per_member:
                 players.remove(p)
+                logger.debug(f'Removing {p}')
 
 # Return time in hour/min/sec as string from sec
 async def returnTime(seconds):
@@ -81,7 +82,7 @@ async def returnTime(seconds):
 # Update the players list and notify users that haven't attacked
 # wait in asyncio.sleep for amount of time passed in
 async def updateAndNotify(cc, time, timeLeft):
-    logger.debug(f'notify with time {time}')
+    logger.debug(f'notify with time {timeLeft}')
     await removeFinishedAttackers(cc)
     remainingTime = await returnTime(timeLeft)
     notifiedPlayers = set()
@@ -89,12 +90,13 @@ async def updateAndNotify(cc, time, timeLeft):
     for member in players:
         for claimedMember in content['clanMembers'].keys():
             if member.tag == claimedMember and content['clanMembers'][claimedMember] not in notifiedPlayers:
-                notifyUser(content['clanMembers'][claimedMember], remainingTime)
+                await notifyUser(content['clanMembers'][claimedMember], remainingTime)
                 notifiedPlayers.add(content['clanMembers'][claimedMember])
     notifiedPlayers.clear()
     logger.debug('waiting till next notification interval')
-    war = await cc.get_current_war(clan_tags[0])
-    await asyncio.sleep(war.end_time.seconds_until - time)
+    war = await cc.get_current_war(content['clanTag'])
+    if war.end_time.seconds_until - time >= 0:
+        await asyncio.sleep(war.end_time.seconds_until - time)
     timeLeft = war.end_time.seconds_until - time
     return timeLeft
 
@@ -105,8 +107,9 @@ async def war_notifier(war, cc):
     #    asyncio.sleep(war.end_time.seconds_until + 500)
     #war = await cc.get_current_war(clan_tags[0])
     logger.debug('initial countdown to 5 hours')
-    await asyncio.sleep(war.end_time.seconds_until - 18000)
-    actualTime = war.end_time.seconds_until - 18000
+    if war.end_time.seconds_until - 18000 >= 0:
+        await asyncio.sleep(war.end_time.seconds_until - 18000)
+    actualTime = war.end_time.seconds_until
     for time in notificationIntervals:
         actualTime = await updateAndNotify(cc, time, actualTime)
     await asyncio.sleep(2400)
@@ -135,6 +138,7 @@ async def syncCommands(ctx: discord.Interaction):
 async def notifyUser(userid:int, remainingtime:str):
     user = await bot.fetch_user(userid)
     await user.send(f'{remainingtime} to get attack in')
+    logger.debug(f'notified {user.name}')
 
 # Bot init
 @bot.event
