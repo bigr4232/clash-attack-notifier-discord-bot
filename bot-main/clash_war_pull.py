@@ -91,9 +91,9 @@ async def updateAndNotify(cc, time):
             if member.tag == claimedMember and content['clanMembers'][claimedMember] not in notifiedPlayers:
                 notifyUser(content['clanMembers'][claimedMember], remainingTime)
                 notifiedPlayers.add(content['clanMembers'][claimedMember])
-    war = await cc.get_current_war(clan_tags[0])
     notifiedPlayers.clear()
     logger.debug('waiting till next notification interval')
+    war = await cc.get_current_war(clan_tags[0])
     await asyncio.sleep(war.end_time.seconds_until - time)
 
 # Sends notifications to players who haven't attacked at each interval
