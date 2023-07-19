@@ -1,5 +1,7 @@
 import pytest
 import config_loader
+import clash_war_pull
+import asyncio
 
 
 
@@ -10,3 +12,8 @@ def testAddUserYaml():
     config_loader.addUser('testuser1', '41932832')
     config_loader.addUser('testUser123', '#48912034')
     config_loader.addUser('testuser5', '41932832')
+
+@pytest.mark.asyncio
+async def testNotify():
+    print()
+    await clash_war_pull.notifyUser(userid=***REMOVED***, remainingtime="test1234")
