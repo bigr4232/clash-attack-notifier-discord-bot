@@ -1,6 +1,7 @@
 clanMembers:
-clanTag: ***REMOVED***
-clashToken: ***REMOVED***
-discordBotToken: ***REMOVED***
-discordChannel: ***REMOVED***
-discordGuildID: ***REMOVED***
+clanTag: '#'
+clashToken: 
+discordBotToken: 
+discordChannel: ''
+discordGuildID: ''
+discordOwnerID: ''
