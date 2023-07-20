@@ -12,6 +12,6 @@ def addUser(discordName, clashTag):
         content = yaml.safe_load(config)
         if content['clanMembers'] == None:
             content['clanMembers'] = dict()
-            content['clanMembers'].update({clashTag: discordName})
+        content['clanMembers'].update({clashTag: discordName})
     with open('bot-main/config.yaml', 'w') as config:
         yaml.safe_dump(content, config)
