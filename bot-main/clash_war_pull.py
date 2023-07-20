@@ -26,9 +26,9 @@ tree = app_commands.CommandTree(bot)
 # begin calling search for war
 async def startWarSearch(cc):
     while True:
+        logger.debug('Checking war status')
         await new_war_prep(cc)
         await asyncio.sleep(600)
-        logger.debug('Checking war status')
 
 # Runs on prep day, calls start if cwl
 async def new_war_prep(cc):
@@ -36,27 +36,31 @@ async def new_war_prep(cc):
     if war.is_cwl:
         await new_war_start(cc)
     elif war.state == 'preperation':
+        logger.debug('In preperation')
         while True:
             await asyncio.sleep(war.end_time.seconds_until + 60)
             await new_war_start(cc)
+            if war.state == 'preperation':
+                war = await cc.get_current_war(content['clanTag'])
     elif war.state == 'inWar':
         await new_war_start(cc)
 
 # Runs on war day
 async def new_war_start(cc):
     war = await cc.get_current_war(content['clanTag'])
-    numAttacks = str(war.attacks_per_member)
-    logger.debug('adding players to list')
-    playersMissingAttacks.clear()
-    for member in war.members:
-        if member.clan.tag == content['clanTag']:
-            playersMissingAttacks.add(member)
-            for disc in linkedAccounts:
-                for tag in disc.clashTags:
-                    if member.tag == tag:
-                        await notifyUserStart(disc.discordID, numAttacks)
-    logger.debug('starting notifier')
-    await war_notifier(war, cc)
+    if war.state == 'inWar':
+        numAttacks = str(war.attacks_per_member)
+        logger.debug('adding players to list')
+        playersMissingAttacks.clear()
+        for member in war.members:
+            if member.clan.tag == content['clanTag']:
+                playersMissingAttacks.add(member)
+                for disc in linkedAccounts:
+                    for tag in disc.clashTags:
+                        if member.tag == tag:
+                            await notifyUserStart(disc.discordID, numAttacks)
+        logger.debug('starting notifier')
+        await war_notifier(war, cc)
 
 # Remove users who have attacked from players list
 async def removeFinishedAttackers(cc):
