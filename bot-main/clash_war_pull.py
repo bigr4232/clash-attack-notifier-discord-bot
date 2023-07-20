@@ -9,8 +9,7 @@ import logging
 # Globals
 playersMissingAttacks = set()
 clan_tags = list()
-linkedAccounts = list()
-content = config_loader.loadYaml(linkedAccounts)
+content = config_loader.loadYaml()
 
 logger = logging.getLogger('logs')
 logger.setLevel(logging.DEBUG)
@@ -33,9 +32,7 @@ async def startWarSearch(cc):
 # Runs on prep day, calls start if cwl
 async def new_war_prep(cc):
     war = await cc.get_current_war(content['clanTag'])
-    if war.is_cwl:
-        await new_war_start(cc)
-    elif war.state == 'preperation':
+    if war.state == 'preperation':
         logger.debug('In preperation')
         while True:
             await asyncio.sleep(war.end_time.seconds_until + 60)
@@ -52,13 +49,15 @@ async def new_war_start(cc):
         numAttacks = str(war.attacks_per_member)
         logger.debug('adding players to list')
         playersMissingAttacks.clear()
+        notifiedPlayers = set()
+        notifiedPlayers.clear()
         for member in war.members:
             if member.clan.tag == content['clanTag']:
                 playersMissingAttacks.add(member)
-                for disc in linkedAccounts:
-                    for tag in disc.clashTags:
-                        if member.tag == tag:
-                            await notifyUserStart(disc.discordID, numAttacks)
+                for discMember in content['clanMembers'].keys():
+                    if discMember == member.tag and member not in notifiedPlayers:
+                        await notifyUserStart(content['clanMembers'][discMember])
+                        notifiedPlayers.add(member)
         logger.debug('starting notifier')
         await war_notifier(war, cc)
 
@@ -98,11 +97,10 @@ async def updateAndNotify(cc, time, timeLeft):
     notifiedPlayers = set()
     logger.debug('send notifications')
     for member in playersMissingAttacks:
-        for claimedMember in linkedAccounts:
-            for claimedtag in claimedMember.clashTags:
-                if member.tag == claimedtag and claimedMember not in notifiedPlayers:
-                    await notifyUserAttackTime(claimedMember.discordID, remainingTime)
-                    notifiedPlayers.add(claimedMember)
+        for claimedMember in content['clanMembers'].keys():
+            if member.tag == claimedMember and content['clanMembers'][claimedMember] not in notifiedPlayers:
+                await notifyUserAttackTime(content['clanMembers'][claimedMember], remainingTime)
+                notifiedPlayers.add(content['clanMembers'][claimedMember])
     notifiedPlayers.clear()
     logger.debug('waiting till next notification interval')
     war = await cc.get_current_war(content['clanTag'])
@@ -128,7 +126,9 @@ async def war_notifier(war, cc):
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name', guild=discord.Object(id=int(content['discordGuildID'])))
 async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
     await ctx.response.send_message(f"Claiming account {clashtag} for {ctx.user.name}", delete_after=300)
-    config_loader.addUser(ctx.user.id, clashtag, linkedAccounts)
+    config_loader.addUser(ctx.user.id, clashtag)
+    global content
+    content = config_loader.loadYaml()
 
 # Command to sync new slash commands
 @tree.command(name='sync-commands', description='command to sync new slash commands', guild=discord.Object(id=int(content['discordGuildID'])))
