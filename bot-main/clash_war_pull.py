@@ -7,7 +7,7 @@ from math import floor
 import logging
 
 # Globals
-players = list()
+playersMissingAttacks = set()
 clan_tags = list()
 content = config_loader.loadYaml()
 
@@ -34,23 +34,12 @@ async def new_war(cc):
     war = await cc.get_current_war(content['clanTag'])
     if war.state == 'inWar':
         logger.debug('adding players to list')
-        players.clear()
+        playersMissingAttacks.clear()
         for member in war.members:
             if member.clan.tag == content['clanTag']:
-                players.append(member)
+                playersMissingAttacks.add(member)
         logger.debug('starting notifier')
         await war_notifier(war, cc)
-
-# Event for new war start. Will start the war attack notifier
-#@coc.WarEvents.new_war(tags=clan_tags)
-#async def new_war(war):
-#    logger.info('new war registered')
-#    players.clear()
-#    for member in war.members:
-#        if member.clan.tag == content['clanTag']:
-#            players.append(member)
-#    await war_notifier(war)
-
 
 # Remove users who have attacked from players list
 async def removeFinishedAttackers(cc):
@@ -59,7 +48,7 @@ async def removeFinishedAttackers(cc):
     for p in war.members:
         if p.clan.tag == content['clanTag']:
             if len(p.attacks) == war.attacks_per_member:
-                players.remove(p)
+                playersMissingAttacks.discard(p)
                 logger.debug(f'Removing {p}')
 
 # Return time in hour/min/sec as string from sec
@@ -87,7 +76,7 @@ async def updateAndNotify(cc, time, timeLeft):
     remainingTime = await returnTime(timeLeft)
     notifiedPlayers = set()
     logger.debug('send notifications')
-    for member in players:
+    for member in playersMissingAttacks:
         for claimedMember in content['clanMembers'].keys():
             if member.tag == claimedMember and content['clanMembers'][claimedMember] not in notifiedPlayers:
                 await notifyUser(content['clanMembers'][claimedMember], remainingTime)
