@@ -56,7 +56,7 @@ async def new_war_start(cc):
                 playersMissingAttacks.add(member)
                 for discMember in content['clanMembers'].keys():
                     if discMember == member.tag and member not in notifiedPlayers:
-                        await notifyUserStart(content['clanMembers'][discMember])
+                        await notifyUserStart(content['clanMembers'][discMember], numAttacks)
                         notifiedPlayers.add(member)
         logger.debug('starting notifier')
         await war_notifier(war, cc)
