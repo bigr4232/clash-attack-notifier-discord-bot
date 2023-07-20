@@ -25,12 +25,22 @@ tree = app_commands.CommandTree(bot)
 # begin calling search for war
 async def startWarSearch(cc):
     while True:
-        await new_war(cc)
+        await new_war_prep(cc)
         await asyncio.sleep(600)
         logger.debug('Checking war status')
 
-# not coc api event based search for war
-async def new_war(cc):
+# Runs on prep day, calls start if cwl
+async def new_war_prep(cc):
+    war = await cc.get_current_war(content['clanTag'])
+    if war.is_cwl:
+        new_war_start(cc)
+    else:
+        while True:
+            asyncio.sleep(war.end_time.seconds_until + 60)
+            new_war_start(cc)
+
+# Runs on war day
+async def new_war_start(cc):
     war = await cc.get_current_war(content['clanTag'])
     if war.state == 'inWar':
         logger.debug('adding players to list')
