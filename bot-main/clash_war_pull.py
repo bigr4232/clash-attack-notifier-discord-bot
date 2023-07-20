@@ -35,10 +35,9 @@ async def new_war_prep(cc):
     if war.state == 'preparation':
         logger.debug('In preparation')
         while True:
-            await asyncio.sleep(war.end_time.seconds_until + 60)
+            await asyncio.sleep(war.end_time.seconds_until - 86402)
             await new_war_start(cc)
-            if war.state == 'preparation':
-                war = await cc.get_current_war(content['clanTag'])
+            war = await cc.get_current_war(content['clanTag'])
     elif war.state == 'inWar':
         await new_war_start(cc)
 
