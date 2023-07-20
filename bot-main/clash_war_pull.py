@@ -40,18 +40,24 @@ async def new_war_prep(cc):
         while True:
             await asyncio.sleep(war.end_time.seconds_until + 60)
             await new_war_start(cc)
+    elif war.state == 'inWar':
+        await new_war_start(cc)
 
 # Runs on war day
 async def new_war_start(cc):
     war = await cc.get_current_war(content['clanTag'])
-    if war.state == 'inWar':
-        logger.debug('adding players to list')
-        playersMissingAttacks.clear()
-        for member in war.members:
-            if member.clan.tag == content['clanTag']:
-                playersMissingAttacks.add(member)
-        logger.debug('starting notifier')
-        await war_notifier(war, cc)
+    numAttacks = str(war.attacks_per_member)
+    logger.debug('adding players to list')
+    playersMissingAttacks.clear()
+    for member in war.members:
+        if member.clan.tag == content['clanTag']:
+            playersMissingAttacks.add(member)
+            for disc in linkedAccounts:
+                for tag in disc.clashTags:
+                    if member.tag == tag:
+                        await notifyUserStart(disc.discordID, numAttacks)
+    logger.debug('starting notifier')
+    await war_notifier(war, cc)
 
 # Remove users who have attacked from players list
 async def removeFinishedAttackers(cc):
@@ -133,6 +139,11 @@ async def syncCommands(ctx: discord.Interaction):
     else:
         await ctx.response.send_message('This command is only for the server owner', delete_after=30)
 
+# Send dm to user that war has started
+@bot.event
+async def notifyUserStart(userid:int, numattacks:str):
+    user = await bot.fetch_user(userid)
+    await user.send(f'War has started in you are in it. You have 24 hours to attack')
 # Send dm to user to get attack in
 @bot.event
 async def notifyUserAttackTime(userid:int, remainingtime:str):
