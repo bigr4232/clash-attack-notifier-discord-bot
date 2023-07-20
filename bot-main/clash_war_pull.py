@@ -32,12 +32,12 @@ async def startWarSearch(cc):
 # Runs on prep day, calls start if cwl
 async def new_war_prep(cc):
     war = await cc.get_current_war(content['clanTag'])
-    if war.state == 'preperation':
-        logger.debug('In preperation')
+    if war.state == 'preparation':
+        logger.debug('In preparation')
         while True:
             await asyncio.sleep(war.end_time.seconds_until + 60)
             await new_war_start(cc)
-            if war.state == 'preperation':
+            if war.state == 'preparation':
                 war = await cc.get_current_war(content['clanTag'])
     elif war.state == 'inWar':
         await new_war_start(cc)
