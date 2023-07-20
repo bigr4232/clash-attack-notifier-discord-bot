@@ -5,7 +5,6 @@ from discord import app_commands
 import config_loader
 from math import floor
 import logging
-from account_link import account
 
 # Globals
 playersMissingAttacks = set()
