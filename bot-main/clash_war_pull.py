@@ -161,12 +161,6 @@ async def main():
             await coc_client.login_with_tokens(content['clashToken'])
         except coc.InvalidCredentials as error:
             exit(error)
-        #coc_client.add_clan_updates(*clan_tags)
-        #coc_client.add_war_updates(*clan_tags)
-        #coc_client.add_events(
-        #    new_war,
-        #)
-        #clan_tags.append(content['clanTag'])
 
         # Add the client session to the bot
         bot.coc_client = coc_client
