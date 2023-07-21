@@ -35,7 +35,7 @@ async def new_war_prep(cc):
     if war.state == 'preparation':
         logger.debug('In preparation')
         while True:
-            await asyncio.sleep(war.end_time.seconds_until - 86000)
+            await asyncio.sleep(war.end_time.seconds_until - 86400)
             await new_war_start(cc)
             war = await cc.get_current_war(content['clanTag'])
     elif war.state == 'inWar':
@@ -52,11 +52,11 @@ async def new_war_start(cc):
         notifiedPlayers.clear()
         for member in war.members:
             if member.clan.tag == content['clanTag']:
-                playersMissingAttacks.add(member)
+                playersMissingAttacks.add(member.tag)
                 for discMember in content['clanMembers'].keys():
-                    if discMember == member.tag and member not in notifiedPlayers:
+                    if discMember == member.tag and content['clanMembers'][member.tag] not in notifiedPlayers:
                         await notifyUserStart(content['clanMembers'][discMember], numAttacks)
-                        notifiedPlayers.add(member)
+                        notifiedPlayers.add(content['clanMembers'][member.tag])
         logger.debug('starting notifier')
         await war_notifier(war, cc)
 
@@ -67,7 +67,7 @@ async def removeFinishedAttackers(cc):
     for p in war.members:
         if p.clan.tag == content['clanTag']:
             if len(p.attacks) == war.attacks_per_member:
-                playersMissingAttacks.discard(p)
+                playersMissingAttacks.discard(p.tag)
                 logger.debug(f'Removing {p}')
 
 # Return time in hour/min/sec as string from sec
@@ -95,9 +95,9 @@ async def updateAndNotify(cc, time, timeLeft):
     remainingTime = await returnTime(timeLeft)
     notifiedPlayers = set()
     logger.debug('send notifications')
-    for member in playersMissingAttacks:
+    for tag in playersMissingAttacks:
         for claimedMember in content['clanMembers'].keys():
-            if member.tag == claimedMember and content['clanMembers'][claimedMember] not in notifiedPlayers:
+            if tag == claimedMember and content['clanMembers'][claimedMember] not in notifiedPlayers:
                 await notifyUserAttackTime(content['clanMembers'][claimedMember], remainingTime)
                 notifiedPlayers.add(content['clanMembers'][claimedMember])
     notifiedPlayers.clear()
@@ -117,7 +117,12 @@ async def war_notifier(war, cc):
     actualTime = war.end_time.seconds_until
     for time in notificationIntervals[1:]:
         actualTime = await updateAndNotify(cc, time, actualTime)
-    await asyncio.sleep(2400)
+    await asyncio.sleep(900)
+    war = await cc.get_current_war(content['clanTag'])
+    timeleft = war.end_time.seconds_until
+    while war.state == 'inWar' and timeleft <= actualTime:
+        war = await cc.get_current_war(content['clanTag'])
+        timeleft = war.end_time.seconds_until
     await startWarSearch(cc)
     
 
@@ -142,13 +147,13 @@ async def syncCommands(ctx: discord.Interaction):
 @bot.event
 async def notifyUserStart(userid:int, numattacks:str):
     user = await bot.fetch_user(userid)
-    await user.send(f'War has started in you are in it. You have 24 hours to attack')
+    #await user.send(f'War has started in you are in it. You have 24 hours to attack')
     logger.debug(f'notified {user.name} war has started')
 # Send dm to user to get attack in
 @bot.event
 async def notifyUserAttackTime(userid:int, remainingtime:str):
     user = await bot.fetch_user(userid)
-    await user.send(f'{remainingtime} to get attack in')
+    #await user.send(f'{remainingtime} to get attack in')
     logger.debug(f'notified {user.name} to get attack in')
 
 # Bot init
