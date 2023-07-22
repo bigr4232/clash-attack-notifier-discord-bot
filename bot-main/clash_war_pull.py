@@ -105,7 +105,8 @@ async def updateAndNotify(cc, time, timeLeft):
     war = await cc.get_current_war(content['clanTag'])
     if war.end_time.seconds_until - time >= 0:
         await asyncio.sleep(war.end_time.seconds_until - time)
-    timeLeft = war.end_time.seconds_until - time
+    war = await cc.get_current_war(content['clanTag'])
+    timeLeft = war.end_time.seconds_until
     return timeLeft
 
 # Sends notifications to players who haven't attacked at each interval
@@ -147,13 +148,14 @@ async def syncCommands(ctx: discord.Interaction):
 @bot.event
 async def notifyUserStart(userid:int, numattacks:str):
     user = await bot.fetch_user(userid)
-    #await user.send(f'War has started in you are in it. You have 24 hours to attack')
+    await user.send(f'War has started in you are in it. You have 24 hours to attack')
     logger.debug(f'notified {user.name} war has started')
+
 # Send dm to user to get attack in
 @bot.event
 async def notifyUserAttackTime(userid:int, remainingtime:str):
     user = await bot.fetch_user(userid)
-    #await user.send(f'{remainingtime} to get attack in')
+    await user.send(f'{remainingtime} to get attack in')
     logger.debug(f'notified {user.name} to get attack in')
 
 # Bot init
