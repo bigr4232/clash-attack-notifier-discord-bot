@@ -13,6 +13,9 @@ content = config_loader.loadYaml()
 
 logger = logging.getLogger('logs')
 logger.setLevel(logging.DEBUG)
+fh = logging.FileHandler('logs.log')
+fh.setLevel(logging.DEBUG)
+logger.addHandler(fh)
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
 # Intents and tree inits
@@ -111,7 +114,7 @@ async def updateAndNotify(cc, time, timeLeft):
 
 # Sends notifications to players who haven't attacked at each interval
 async def war_notifier(war, cc):
-    notificationIntervals = [43200, 10800, 3600, 1800, 900]
+    notificationIntervals = [43200, 18000, 10800, 3600, 1800, 900]
     logger.debug('initial countdown to 12 hours')
     if war.end_time.seconds_until - notificationIntervals[0] >= 0:
         await asyncio.sleep(war.end_time.seconds_until - notificationIntervals[0])
