@@ -151,7 +151,7 @@ async def syncCommands(ctx: discord.Interaction):
 @bot.event
 async def notifyUserStart(userid:int, numattacks:str):
     user = await bot.fetch_user(userid)
-    await user.send(f'War has started in you are in it. You have 24 hours to attack')
+    #await user.send(f'War has started in you are in it. You have 24 hours to attack')
     logger.debug(f'notified {user.name} war has started')
 
 # Send dm to user to get attack in
@@ -182,6 +182,7 @@ async def main():
 # Main to run main repeatedly with asyncio
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main())
     except KeyboardInterrupt:
         pass
