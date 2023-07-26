@@ -129,7 +129,7 @@ async def war_notifier(war, cc):
     
 
 # Command to claim clash account. With no input of username, will use discord name from command issuer
-@tree.command(name='claimaccount', description='claim clash account with tag and discord name', guild=discord.Object(id=int(content['discordGuildID'])))
+@tree.command(name='claimaccount', description='claim clash account with tag and discord name')
 async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
     await ctx.response.send_message(f"Claiming account {clashtag} for {ctx.user.name}", delete_after=300)
     config_loader.addUser(ctx.user.id, clashtag)
@@ -137,7 +137,6 @@ async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
     content = config_loader.loadYaml()
 
 # Command to sync new slash commands
-#@tree.command(name='sync-commands', description='command to sync new slash commands', guild=[discord.Object(id=int(content['discordGuildID']))])
 @tree.command(name='sync-commands', description='command to sync new slash commands')
 async def syncCommands(ctx: discord.Interaction):
     if ctx.user.id == int(content['discordOwnerID']):
@@ -149,7 +148,7 @@ async def syncCommands(ctx: discord.Interaction):
 @bot.event
 async def notifyUserStart(userid:int, numattacks:str):
     user = await bot.fetch_user(userid)
-    #await user.send(f'War has started in you are in it. You have 24 hours to attack')
+    await user.send(f'War has started and you are in it. You have 24 hours to attack {numattacks} times')
     logger.debug(f'notified {user.name} war has started')
 
 # Send dm to user to get attack in
