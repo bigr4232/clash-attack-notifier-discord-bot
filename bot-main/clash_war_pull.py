@@ -93,6 +93,12 @@ async def returnTime(seconds):
 # Update the players list and notify users that haven't attacked
 # wait in asyncio.sleep for amount of time passed in
 async def updateAndNotify(cc, time, timeLeft):
+    logger.debug('waiting till next notification interval')
+    war = await cc.get_current_war(content['clanTag'])
+    if war.end_time.seconds_until - time >= 0:
+        await asyncio.sleep(war.end_time.seconds_until - time)
+    war = await cc.get_current_war(content['clanTag'])
+    timeLeft = war.end_time.seconds_until
     logger.debug(f'notify with time {timeLeft}')
     await removeFinishedAttackers(cc)
     remainingTime = await returnTime(timeLeft)
@@ -104,10 +110,6 @@ async def updateAndNotify(cc, time, timeLeft):
                 await notifyUserAttackTime(content['clanMembers'][claimedMember], remainingTime)
                 notifiedPlayers.add(content['clanMembers'][claimedMember])
     notifiedPlayers.clear()
-    logger.debug('waiting till next notification interval')
-    war = await cc.get_current_war(content['clanTag'])
-    if war.end_time.seconds_until - time >= 0:
-        await asyncio.sleep(war.end_time.seconds_until - time)
     war = await cc.get_current_war(content['clanTag'])
     timeLeft = war.end_time.seconds_until
     return timeLeft
@@ -115,9 +117,6 @@ async def updateAndNotify(cc, time, timeLeft):
 # Sends notifications to players who haven't attacked at each interval
 async def war_notifier(war, cc):
     notificationIntervals = [43200, 18000, 10800, 3600, 1800, 900]
-    logger.debug('initial countdown to 12 hours')
-    if war.end_time.seconds_until - notificationIntervals[0] >= 0:
-        await asyncio.sleep(war.end_time.seconds_until - notificationIntervals[0])
     actualTime = war.end_time.seconds_until
     for time in notificationIntervals[1:]:
         actualTime = await updateAndNotify(cc, time, actualTime)
@@ -127,7 +126,6 @@ async def war_notifier(war, cc):
     while war.state == 'inWar' and timeleft <= actualTime:
         war = await cc.get_current_war(content['clanTag'])
         timeleft = war.end_time.seconds_until
-    await startWarSearch(cc)
     
 
 # Command to claim clash account. With no input of username, will use discord name from command issuer
@@ -139,11 +137,11 @@ async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
     content = config_loader.loadYaml()
 
 # Command to sync new slash commands
-@tree.command(name='sync-commands', description='command to sync new slash commands', guild=discord.Object(id=int(content['discordGuildID'])))
+#@tree.command(name='sync-commands', description='command to sync new slash commands', guild=[discord.Object(id=int(content['discordGuildID']))])
+@tree.command(name='sync-commands', description='command to sync new slash commands')
 async def syncCommands(ctx: discord.Interaction):
     if ctx.user.id == int(content['discordOwnerID']):
         await ctx.response.send_message('Commands synced', delete_after=30)
-        await tree.sync(guild=discord.Object(id=int(content['discordGuildID'])))
     else:
         await ctx.response.send_message('This command is only for the server owner', delete_after=30)
 
@@ -165,6 +163,7 @@ async def notifyUserAttackTime(userid:int, remainingtime:str):
 @bot.event
 async def on_ready():
     logger.info('bot ready')
+    await tree.sync()
     await startWarSearch(bot.coc_client)
 
 # coc API init
