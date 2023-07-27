@@ -118,7 +118,7 @@ async def updateAndNotify(cc, time, timeLeft):
 async def war_notifier(war, cc):
     notificationIntervals = [43200, 18000, 10800, 3600, 1800, 900]
     actualTime = war.end_time.seconds_until
-    for time in notificationIntervals[1:]:
+    for time in notificationIntervals:
         actualTime = await updateAndNotify(cc, time, actualTime)
     await asyncio.sleep(900)
     war = await cc.get_current_war(content['clanTag'])
@@ -140,6 +140,7 @@ async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
 @tree.command(name='sync-commands', description='command to sync new slash commands')
 async def syncCommands(ctx: discord.Interaction):
     if ctx.user.id == int(content['discordOwnerID']):
+        await tree.sync()
         await ctx.response.send_message('Commands synced', delete_after=30)
     else:
         await ctx.response.send_message('This command is only for the server owner', delete_after=30)
@@ -162,7 +163,6 @@ async def notifyUserAttackTime(userid:int, remainingtime:str):
 @bot.event
 async def on_ready():
     logger.info('bot ready')
-    await tree.sync()
     await startWarSearch(bot.coc_client)
 
 # coc API init
