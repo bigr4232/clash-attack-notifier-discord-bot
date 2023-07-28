@@ -21,6 +21,7 @@ logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S
 # Intents and tree inits
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 bot = discord.Client(intents=intents)
 managers = {}
 tree = app_commands.CommandTree(bot)
@@ -156,15 +157,22 @@ async def syncCommands(ctx: discord.Interaction):
 @bot.event
 async def notifyUserStart(userid:int, numattacks:str):
     user = await bot.fetch_user(userid)
-    await user.send(f'War has started and you are in it. You have 24 hours to attack {numattacks} times')
+    #await user.send(f'War has started and you are in it. You have 24 hours to attack {numattacks} times')
     logger.debug(f'notified {user.name} war has started')
 
 # Send dm to user to get attack in
 @bot.event
 async def notifyUserAttackTime(userid:int, remainingtime:str):
     user = await bot.fetch_user(userid)
-    await user.send(f'{remainingtime} to get attack in')
+    #await user.send(f'{remainingtime} to get attack in')
     logger.debug(f'notified {user.name} to get attack in')
+
+# Send message to new member
+@bot.event
+async def on_member_join(member):
+    newMemberMessage = (f'Hello {member.name}, Welcome to the Natty Daddy discord Channel\n\nPlease claim your account in clash by using the command /claimaccount [clashtag]. This can be messaged to me here or placed in the server in any channel. Multiple accounts can be added one at a time\n\nExample: /claimaccount #859404klj')
+    logger.debug(f'Sending welcome message to {member.name}')
+    await member.send(newMemberMessage)
 
 # Bot init
 @bot.event
