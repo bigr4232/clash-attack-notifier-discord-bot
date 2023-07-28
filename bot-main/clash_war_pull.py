@@ -45,7 +45,6 @@ async def new_war_prep(cc):
             war = await cc.get_current_war(content['clanTag'])
     elif war.state == 'inWar':
         await new_war_start(cc)
-    
 
 # Runs on war day
 async def new_war_start(cc):
