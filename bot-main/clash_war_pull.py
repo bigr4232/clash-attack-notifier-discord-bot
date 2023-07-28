@@ -37,12 +37,15 @@ async def new_war_prep(cc):
     war = await cc.get_current_war(content['clanTag'])
     if war.state == 'preparation':
         logger.debug('In preparation')
-        while True:
+        inPrep = True
+        while inPrep:
             await asyncio.sleep(war.end_time.seconds_until - 86400)
-            await new_war_start(cc)
+            inPrep = await new_war_start(cc)
             war = await cc.get_current_war(content['clanTag'])
     elif war.state == 'inWar':
         await new_war_start(cc)
+        return True
+    
 
 # Runs on war day
 async def new_war_start(cc):
@@ -58,10 +61,13 @@ async def new_war_start(cc):
                 playersMissingAttacks.add(member.tag)
                 for discMember in content['clanMembers'].keys():
                     if discMember == member.tag and content['clanMembers'][member.tag] not in notifiedPlayers:
-                        await notifyUserStart(content['clanMembers'][discMember], numAttacks)
+                        if war.end_time.seconds_until > 80000:
+                            await notifyUserStart(content['clanMembers'][discMember], numAttacks)
                         notifiedPlayers.add(content['clanMembers'][member.tag])
         logger.debug('starting notifier')
         await war_notifier(war, cc)
+        return False
+    return True
 
 # Remove users who have attacked from players list
 async def removeFinishedAttackers(cc):
@@ -119,7 +125,8 @@ async def war_notifier(war, cc):
     notificationIntervals = [43200, 18000, 10800, 3600, 1800, 900]
     actualTime = war.end_time.seconds_until
     for time in notificationIntervals:
-        actualTime = await updateAndNotify(cc, time, actualTime)
+        if actualTime > time:
+            actualTime = await updateAndNotify(cc, time, actualTime)
     await asyncio.sleep(900)
     war = await cc.get_current_war(content['clanTag'])
     timeleft = war.end_time.seconds_until
