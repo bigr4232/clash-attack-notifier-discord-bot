@@ -168,7 +168,7 @@ async def notifyUserAttackTime(userid:int, remainingtime:str):
 # Send message to new member
 @bot.event
 async def on_member_join(member):
-    newMemberMessage = (f'Hello {member.name}, Welcome to the Natty Daddy discord Channel\n\nPlease claim your account in clash by using the command /claimaccount [clashtag]. This can be messaged to me here or placed in the server in any channel. Multiple accounts can be added one at a time\n\nExample: /claimaccount #859404klj')
+    newMemberMessage = (f'Hello {member.name}, Welcome to the Natty Daddy discord Server\n\nPlease claim your account in clash by using the command /claimaccount [clashtag]. This can be messaged to me here or placed in the server in any channel. Multiple accounts can be added one at a time\n\nExample: /claimaccount #859404klj')
     logger.debug(f'Sending welcome message to {member.name}')
     await member.send(newMemberMessage)
 
