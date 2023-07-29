@@ -5,6 +5,8 @@ class accountLink:
         self.tags = set()
         self.numAttacks = 0
         self.numAttackChances = 0
+        self.finishedAttacks = False
+        self.clashRole = 'member'
 
     def __hash__(self) -> int:
         return hash(self.discordID)
