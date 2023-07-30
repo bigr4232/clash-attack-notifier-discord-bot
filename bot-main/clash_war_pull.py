@@ -121,7 +121,7 @@ async def updateAndNotify(cc, time, timeLeft):
 
 # Sends notifications to players who haven't attacked at each interval
 async def war_notifier(war, cc):
-    notificationIntervals = [43200, 18000, 10800, 3600, 1800, 900]
+    notificationIntervals = [43200, 18000, 10800, 7200, 3600, 1800, 900]
     actualTime = war.end_time.seconds_until
     for time in notificationIntervals:
         if actualTime > time:
