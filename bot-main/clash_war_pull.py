@@ -155,13 +155,16 @@ async def syncCommands(ctx: discord.Interaction):
 # Command to send intro message to someone manually
 @tree.command(name='send-welcome-message', description='send welcome message to specified user')
 async def sendWelcomeCommand(ctx:discord.Interaction, username:str):
-    for member in tree.client.users:
-        if member.name == username:
-            newMemberMessage = (f'Hello {member.name}, Welcome to the Natty Daddy discord Server\n\nPlease claim your account in clash by using the command /claimaccount [clashtag]. This can be messaged to me here or placed in the server in any channel. Multiple accounts can be added one at a time\n\nExample: /claimaccount #859404klj')
-            await member.send(newMemberMessage)
-            await ctx.response.send_message(f'Sent welcome message to {username}')
-            return
-    await ctx.response.send_message(f'Unable to find user {username}')
+    if ctx.user.id == int(content['discordOwnerID']):
+        for member in tree.client.users:
+            if member.name == username:
+                newMemberMessage = (f'Hello {member.name}, Welcome to the Natty Daddy discord Server\n\nPlease claim your account in clash by using the command /claimaccount [clashtag]. This can be messaged to me here or placed in the server in any channel. Multiple accounts can be added one at a time\n\nExample: /claimaccount #859404klj')
+                await member.send(newMemberMessage)
+                await ctx.response.send_message(f'Sent welcome message to {username}', delete_after=30)
+                return
+        await ctx.response.send_message(f'Unable to find user {username}', delete_after=30)
+    else:
+        await ctx.response.send_message('This command is only for the server owner', delete_after=30)
 
 # Send dm to user that war has started
 @bot.event
