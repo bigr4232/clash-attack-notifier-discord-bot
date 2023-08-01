@@ -126,12 +126,13 @@ async def war_notifier(war, cc):
     for time in notificationIntervals:
         if actualTime > time:
             actualTime = await updateAndNotify(cc, time, actualTime)
-    await asyncio.sleep(900)
+    await asyncio.sleep(1000)
     war = await cc.get_current_war(content['clanTag'])
     timeleft = war.end_time.seconds_until
     while war.state == 'inWar' and timeleft <= actualTime:
         war = await cc.get_current_war(content['clanTag'])
         timeleft = war.end_time.seconds_until
+        await asyncio.sleep(300)
     
 
 # Command to claim clash account. With no input of username, will use discord name from command issuer
