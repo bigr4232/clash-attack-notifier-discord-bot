@@ -36,6 +36,8 @@ async def startWarSearch(cc):
 # Runs on prep day, calls start if cwl
 async def new_war_prep(cc):
     war = await cc.get_current_war(content['clanTag'])
+    if war == None:
+        return
     if war.state == 'preparation':
         logger.debug('In preparation')
         inPrep = True
