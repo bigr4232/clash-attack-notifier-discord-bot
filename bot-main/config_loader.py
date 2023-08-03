@@ -28,3 +28,7 @@ def setYaml(clantag, clashtoken, discordbottoken, discordchannel, discordguildid
     content['discordOwnerID'] = discordowner
     with open('bot-main/config.yaml', 'w') as config:
         yaml.safe_dump(content, config)
+
+def loadAndUpdateAccounts(accounts):
+    with open('bot-main/config.yaml', 'r') as config:
+        content = yaml.safe_load(config)
