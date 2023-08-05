@@ -5,6 +5,7 @@ from discord import app_commands
 import config_loader
 from math import floor
 import logging
+import sys
 
 # Globals
 playersMissingAttacks = set()
@@ -12,11 +13,13 @@ clan_tags = list()
 content = config_loader.loadYaml()
 
 logger = logging.getLogger('logs')
-logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('logs.log')
-fh.setLevel(logging.DEBUG)
-logger.addHandler(fh)
-logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+for arg in sys.argv:
+    if arg == '-d':
+        logger.setLevel(logging.DEBUG)
+        fh = logging.FileHandler('logs.log')
+        fh.setLevel(logging.DEBUG)
+        logger.addHandler(fh)
+        logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
 # Intents and tree inits
 intents = discord.Intents.default()
