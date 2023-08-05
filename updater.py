@@ -47,6 +47,7 @@ def main():
     if dst[:0] == '/' or dst[:0] == '\\':
         dst = dst[:-1]
     updateFiles(dst)
+    logger.info('Update complete')
 
 if __name__ == "__main__":
     main()
