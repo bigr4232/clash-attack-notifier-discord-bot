@@ -15,3 +15,16 @@ def addUser(discordName, clashTag):
         content['clanMembers'].update({clashTag: discordName})
     with open('bot-main/config.yaml', 'w') as config:
         yaml.safe_dump(content, config)
+
+def setYaml(clantag, clashtoken, discordbottoken, discordchannel, discordguildid, discordowner):
+    content = loadYaml()
+    if clantag[0] != '#':
+        clantag = f'#{clantag}'
+    content['clanTag'] = clantag
+    content['clashToken'] = clashtoken
+    content['discordBotToken'] = discordbottoken
+    content['discordChannel'] = discordchannel
+    content['discordGuildID'] = discordguildid
+    content['discordOwnerID'] = discordowner
+    with open('bot-main/config.yaml', 'w') as config:
+        yaml.safe_dump(content, config)
