@@ -28,13 +28,15 @@ tree = app_commands.CommandTree(bot)
 
 # begin calling search for war
 async def startWarSearch(cc):
+    firstRun = True
     while True:
         logger.debug('Checking war status')
-        await new_war_prep(cc)
+        await new_war_prep(cc, firstRun)
+        firstRun = False
         await asyncio.sleep(600)
 
 # Runs on prep day, calls start if cwl
-async def new_war_prep(cc):
+async def new_war_prep(cc, firstRun):
     war = await cc.get_current_war(content['clanTag'])
     if war == None:
         return
@@ -43,13 +45,13 @@ async def new_war_prep(cc):
         inPrep = True
         while inPrep:
             await asyncio.sleep(war.end_time.seconds_until - 86400)
-            inPrep = await new_war_start(cc)
+            inPrep = await new_war_start(cc, firstRun)
             war = await cc.get_current_war(content['clanTag'])
     elif war.state == 'inWar':
-        await new_war_start(cc)
+        await new_war_start(cc, firstRun)
 
 # Runs on war day
-async def new_war_start(cc):
+async def new_war_start(cc, firstRun):
     war = await cc.get_current_war(content['clanTag'])
     if war.state == 'inWar':
         numAttacks = str(war.attacks_per_member)
@@ -62,8 +64,9 @@ async def new_war_start(cc):
                 playersMissingAttacks.add(member.tag)
                 for discMember in content['clanMembers'].keys():
                     if discMember == member.tag and content['clanMembers'][member.tag] not in notifiedPlayers:
-                        if war.end_time.seconds_until > 80000:
-                            await notifyUserStart(content['clanMembers'][discMember], numAttacks)
+                        if war.end_time.seconds_until > 80000 or not firstRun:
+                            timeleft = await returnTime(war.end_time.seconds_until)
+                            await notifyUserStart(content['clanMembers'][discMember], numAttacks, timeleft)
                         notifiedPlayers.add(content['clanMembers'][member.tag])
         logger.debug('starting notifier')
         await war_notifier(war, cc)
@@ -170,9 +173,9 @@ async def sendWelcomeCommand(ctx:discord.Interaction, username:str):
 
 # Send dm to user that war has started
 @bot.event
-async def notifyUserStart(userid:int, numattacks:str):
+async def notifyUserStart(userid:int, numattacks:str, remainingtime:str):
     user = await bot.fetch_user(userid)
-    await user.send(f'War has started and you are in it. You have 24 hours to attack {numattacks} times')
+    await user.send(f'War has started and you are in it. You have {remainingtime} to attack {numattacks} times')
     logger.debug(f'notified {user.name} war has started')
 
 # Send dm to user to get attack in
