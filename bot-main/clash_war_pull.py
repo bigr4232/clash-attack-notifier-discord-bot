@@ -31,6 +31,7 @@ tree = app_commands.CommandTree(bot)
 
 # begin calling search for war
 async def startWarSearch(cc):
+    logger.info('Starting war notifier')
     firstRun = True
     while True:
         logger.debug('Checking war status')
