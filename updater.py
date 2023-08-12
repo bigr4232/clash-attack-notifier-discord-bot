@@ -37,10 +37,21 @@ def updateFiles(dst):
 
 def main():
     logger.info('Updating files to version in this folder')
-    if len(sys.argv) < 2:
+
+    # Error checker
+    directoryFlagIsPresent = False
+    directoryIsPresent = False
+    for i in range(len(sys.argv)):
+        if sys.argv[i] == '-dir':
+            directoryFlagIsPresent = True
+            if len(sys.argv) > i + 1 and sys.argv[i+1][0] != '-':
+                directoryIsPresent = True
+    if not directoryFlagIsPresent:
         raise MissingDirArg()
-    if len(sys.argv) < 3:
+    if not directoryIsPresent:
         raise NoPathException()
+    
+    # Run updater
     for i in range(len(sys.argv)):
         if sys.argv[i] == '-dir' and len(sys.argv) >= i+1:
             dst = sys.argv[i+1]
