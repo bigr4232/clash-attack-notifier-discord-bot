@@ -12,6 +12,7 @@ playersMissingAttacks = set()
 clan_tags = list()
 content = config_loader.loadYaml()
 
+# Logging
 logger = logging.getLogger('logs')
 for arg in sys.argv:
     if arg == '-d':
@@ -20,6 +21,8 @@ for arg in sys.argv:
         fh.setLevel(logging.DEBUG)
         logger.addHandler(fh)
         logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+    else:
+        logger.setLevel(logging.INFO)
 
 # Intents and tree inits
 intents = discord.Intents.default()
@@ -29,7 +32,7 @@ bot = discord.Client(intents=intents)
 managers = {}
 tree = app_commands.CommandTree(bot)
 
-# begin calling search for war
+# Begin calling search for war
 async def startWarSearch(cc):
     logger.info('Starting war notifier')
     firstRun = True
@@ -105,7 +108,7 @@ async def returnTime(seconds):
     return remainingTime
 
 # Update the players list and notify users that haven't attacked
-# wait in asyncio.sleep for amount of time passed in
+# Wait in asyncio.sleep for amount of time passed in
 async def updateAndNotify(cc, time, timeLeft):
     logger.debug('waiting till next notification interval')
     war = await cc.get_current_war(content['clanTag'])
@@ -202,7 +205,7 @@ async def on_ready():
     logger.info('bot ready')
     await startWarSearch(bot.coc_client)
 
-# coc API init
+# Coc API init
 async def main():
     async with coc.Client() as coc_client:
         try:
