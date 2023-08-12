@@ -12,6 +12,7 @@ playersMissingAttacks = set()
 clan_tags = list()
 content = config_loader.loadYaml()
 
+debugMode = False
 # Logging
 logger = logging.getLogger('logs')
 for arg in sys.argv:
@@ -20,9 +21,10 @@ for arg in sys.argv:
         fh = logging.FileHandler('logs.log')
         fh.setLevel(logging.DEBUG)
         logger.addHandler(fh)
-        logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-    else:
-        logger.setLevel(logging.INFO)
+        debugMode = True
+if not debugMode:
+    logger.setLevel(logging.INFO)
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
 # Intents and tree inits
 intents = discord.Intents.default()
