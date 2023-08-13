@@ -2,8 +2,8 @@ version: '3.4'
 
 services:
   steamauthkeydiscordbot:
-    image: clashAttackNotifier
-    container_name: clashAttackNotifier
+    image: clash-attack-notifier
+    container_name: clash-attack-notifier
     build:
       context: .
       dockerfile: ./Dockerfile
