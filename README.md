@@ -1,4 +1,4 @@
-# Clash Attack Notfier
+# Clash Attack Notifier
 
 Discord Bot that will notify members in clan when war starts and if they haven't attacked.
 
