@@ -16,4 +16,4 @@ def testAddUserYaml():
 @pytest.mark.asyncio
 async def testNotify():
     print()
-    await clash_war_pull.notifyUser(userid=***REMOVED***, remainingtime="test1234")
+    await clash_war_pull.notifyUser(userid=186200408492867584, remainingtime="test1234")
