@@ -3,7 +3,6 @@ import os
 import logging
 import shutil
 from file_exceptions import *
-import pathlib
 
 sys.path.append('bot-main')
 from config_loader import setYaml
