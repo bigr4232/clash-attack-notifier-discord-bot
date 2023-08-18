@@ -15,6 +15,8 @@ content = config_loader.loadYaml()
 updateAccounts()
 
 debugMode = False
+silentMode = False
+syncCommandsOnStart = False
 # Logging
 logger = logging.getLogger('logs')
 for arg in sys.argv:
@@ -24,6 +26,10 @@ for arg in sys.argv:
         fh.setLevel(logging.DEBUG)
         logger.addHandler(fh)
         debugMode = True
+    if arg == '--silent':
+        silentMode = True
+    if arg == '--sync':
+        syncCommandsOnStart = True
 if not debugMode:
     logger.setLevel(logging.INFO)
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -206,6 +212,8 @@ async def on_member_join(member):
 @bot.event
 async def on_ready():
     logger.info('bot ready')
+    if syncCommandsOnStart:
+        await tree.sync()
     await startWarSearch(bot.coc_client)
 
 # Coc API init
