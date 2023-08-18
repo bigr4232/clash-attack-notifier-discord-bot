@@ -36,7 +36,5 @@ def updateAccounts():
             discordAccounts.add(acc)
             clashTagMapping.update({clashid:acc})
             discordTagMapping.update({content['clanMembers'][clashid]:acc})
-    print()
 
-updateAccounts()
 updateAccounts()

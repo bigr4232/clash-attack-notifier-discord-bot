@@ -6,11 +6,13 @@ import config_loader
 from math import floor
 import logging
 import sys
+from account_linker import discordTagMapping, clashTagMapping, updateAccounts
 
 # Globals
 playersMissingAttacks = set()
 clan_tags = list()
 content = config_loader.loadYaml()
+updateAccounts()
 
 debugMode = False
 # Logging
@@ -71,12 +73,12 @@ async def new_war_start(cc, firstRun):
         for member in war.members:
             if member.clan.tag == content['clanTag']:
                 playersMissingAttacks.add(member.tag)
-                for discMember in content['clanMembers'].keys():
-                    if discMember == member.tag and content['clanMembers'][member.tag] not in notifiedPlayers:
+                for discMember in clashTagMapping.keys():
+                    if discMember == member.tag and clashTagMapping[member.tag] not in notifiedPlayers:
                         if war.end_time.seconds_until > 80000 or not firstRun:
                             timeleft = await returnTime(war.end_time.seconds_until)
-                            await notifyUserStart(content['clanMembers'][discMember], numAttacks, timeleft)
-                        notifiedPlayers.add(content['clanMembers'][member.tag])
+                            await notifyUserStart(clashTagMapping[discMember], numAttacks, timeleft)
+                        notifiedPlayers.add(clashTagMapping[member.tag])
         logger.debug('starting notifier')
         await war_notifier(war, cc)
         return False
@@ -124,10 +126,10 @@ async def updateAndNotify(cc, time, timeLeft):
     notifiedPlayers = set()
     logger.debug('send notifications')
     for tag in playersMissingAttacks:
-        for claimedMember in content['clanMembers'].keys():
-            if tag == claimedMember and content['clanMembers'][claimedMember] not in notifiedPlayers:
-                await notifyUserAttackTime(content['clanMembers'][claimedMember], remainingTime)
-                notifiedPlayers.add(content['clanMembers'][claimedMember])
+        for claimedMember in clashTagMapping.keys():
+            if tag == claimedMember and clashTagMapping[claimedMember] not in notifiedPlayers:
+                await notifyUserAttackTime(clashTagMapping[claimedMember], remainingTime)
+                notifiedPlayers.add(clashTagMapping[claimedMember])
     notifiedPlayers.clear()
     war = await cc.get_current_war(content['clanTag'])
     timeLeft = war.end_time.seconds_until
@@ -154,8 +156,7 @@ async def war_notifier(war, cc):
 async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
     await ctx.response.send_message(f"Claiming account {clashtag} for {ctx.user.name}", delete_after=300)
     config_loader.addUser(ctx.user.id, clashtag)
-    global content
-    content = config_loader.loadYaml()
+    updateAccounts()
 
 # Command to sync new slash commands
 @tree.command(name='sync-commands', description='command to sync new slash commands')
