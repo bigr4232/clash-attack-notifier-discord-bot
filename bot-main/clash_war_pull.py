@@ -83,7 +83,7 @@ async def new_war_start(cc, firstRun):
                     if discMember == member.tag and clashTagMapping[member.tag] not in notifiedPlayers:
                         if war.end_time.seconds_until > 80000 or not firstRun:
                             timeleft = await returnTime(war.end_time.seconds_until)
-                            await notifyUserStart(clashTagMapping[discMember], numAttacks, timeleft)
+                            await notifyUserStart(clashTagMapping[discMember].discordID, numAttacks, timeleft)
                         notifiedPlayers.add(clashTagMapping[member.tag])
         logger.debug('starting notifier')
         await war_notifier(war, cc)
@@ -134,7 +134,7 @@ async def updateAndNotify(cc, time, timeLeft):
     for tag in playersMissingAttacks:
         for claimedMember in clashTagMapping.keys():
             if tag == claimedMember and clashTagMapping[claimedMember] not in notifiedPlayers:
-                await notifyUserAttackTime(clashTagMapping[claimedMember], remainingTime)
+                await notifyUserAttackTime(clashTagMapping[claimedMember].discordID, remainingTime)
                 notifiedPlayers.add(clashTagMapping[claimedMember])
     notifiedPlayers.clear()
     war = await cc.get_current_war(content['clanTag'])
