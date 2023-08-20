@@ -113,7 +113,7 @@ async def returnTime(seconds):
         remainingTime += str(minutes) + ' minutes '
     if seconds > 0:
         remainingTime += str(seconds) + ' seconds '
-    remainingTime += 'remaining '
+    remainingTime += 'remaining'
     logger.debug(f'time: {remainingTime}')
     return remainingTime
 
