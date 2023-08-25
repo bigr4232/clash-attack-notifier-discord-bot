@@ -100,20 +100,23 @@ async def removeFinishedAttackers(cc):
                 playersMissingAttacks.discard(p.tag)
                 logger.debug(f'Removing {p}')
 
-# Return time in hour/min/sec as string from sec
-async def returnTime(seconds):
+# Return time in hour/min/sec as string from sec, round time to minutes
+def returnTime(seconds):
     minutes = floor(seconds / 60)
     seconds -= minutes * 60
     hours = floor(minutes / 60)
     minutes -= hours * 60
+    if seconds >= 50:
+        minutes += 1
+        if minutes == 60:
+            minutes = 0
+            hours += 1
     remainingTime = ''
     if hours > 0:
         remainingTime += str(hours) + ' hours '
     if minutes > 0:
         remainingTime += str(minutes) + ' minutes '
-    if seconds > 0:
-        remainingTime += str(seconds) + ' seconds '
-    remainingTime += 'remaining'
+    remainingTime += 'remaining '
     logger.debug(f'time: {remainingTime}')
     return remainingTime
 
