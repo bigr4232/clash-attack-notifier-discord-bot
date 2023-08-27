@@ -14,6 +14,7 @@ playersMissingAttacks = set()
 clan_tags = list()
 content = config_loader.loadYaml()
 updateAccounts()
+roles = {'leader':0, 'co-leader':0, 'elder':0, 'member':0, 'not-in-clan':0}
 
 debugMode = False
 silentMode = False
@@ -39,6 +40,8 @@ logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+intents.guilds = True
+intents.moderation = True
 bot = discord.Client(intents=intents)
 managers = {}
 tree = app_commands.CommandTree(bot)
@@ -160,7 +163,6 @@ async def war_notifier(war, cc):
         timeleft = war.end_time.seconds_until
         await asyncio.sleep(300)
     
-
 # Command to claim clash account. With no input of username, will use discord name from command issuer
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name')
 async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
@@ -218,24 +220,39 @@ async def on_member_join(member):
 # Updates roles of each member in clan every 5 minutes
 async def updateRoles(cc):
     for member in bot.get_all_members():
+        clashRole = 0
         if member.id in discordTagMapping.keys():
             clashRole = await discordTagMapping[member.id].updateRole(cc)
         if clashRole == 4:
-            await member.add_roles('leader')
+            await member.add_roles(discord.Object(id=roles['leader']))
         elif clashRole == 3:
-            await member.add_roles('co-leader')
+            await member.add_roles(discord.Object(id=roles['co-leader']))
         elif clashRole == 2:
-            await member.add_roles('elder')
+            await member.add_roles(discord.Object(id=roles['elder']))
         elif clashRole == 1:
-            await member.add_roles('member')
+            await member.add_roles(discord.Object(id=roles['member']))
         elif clashRole == 0:
-            await member.add_roles('not-in-clan')
-    asyncio.sleep(300)
+            await member.add_roles(discord.Object(id=roles['not-in-clan']))
+    await asyncio.sleep(3000)
 
+@bot.event
+async def assignRoles():
+    rolesInServer = set()
+    guild = bot.get_guild(int(content['discordGuildID']))
+    for role in guild.roles:
+        if role.name in roles.keys():
+            rolesInServer.add(role.name)
+            roles[role.name] = role.id
+    if len(rolesInServer) != len(roles.keys()):
+        for role in roles.keys():
+            if role not in rolesInServer:
+                r = await guild.create_role(name=role)
+                roles[role] = r.id
 # Bot init
 @bot.event
 async def on_ready():
     logger.info('bot ready')
+    await assignRoles()
     if syncCommandsOnStart:
         await tree.sync()
     asyncio.get_event_loop().create_task(updateRoles(bot.coc_client))
