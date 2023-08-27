@@ -37,8 +37,6 @@ class accountLink:
                 highestRole = 1
         return highestRole
 
-
-
 def updateAccounts():
     for clashid in content['clanMembers'].keys():
         acc = accountLink(discordID=content['clanMembers'][clashid])

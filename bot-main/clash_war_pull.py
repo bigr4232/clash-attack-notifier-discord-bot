@@ -215,6 +215,7 @@ async def on_member_join(member):
     if not silentMode:
         await member.send(newMemberMessage)
 
+# Updates roles of each member in clan every 5 minutes
 async def updateRoles(cc):
     for member in bot.get_all_members():
         if member.id in discordTagMapping.keys():
