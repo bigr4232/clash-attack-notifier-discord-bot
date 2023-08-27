@@ -7,6 +7,7 @@ from math import floor
 import logging
 import sys
 from account_linker import discordTagMapping, clashTagMapping, updateAccounts
+import time
 
 # Globals
 playersMissingAttacks = set()
@@ -214,12 +215,29 @@ async def on_member_join(member):
     if not silentMode:
         await member.send(newMemberMessage)
 
+async def updateRoles(cc):
+    for member in bot.get_all_members():
+        if member.id in discordTagMapping.keys():
+            clashRole = await discordTagMapping[member.id].updateRole(cc)
+        if clashRole == 4:
+            await member.add_roles('leader')
+        elif clashRole == 3:
+            await member.add_roles('co-leader')
+        elif clashRole == 2:
+            await member.add_roles('elder')
+        elif clashRole == 1:
+            await member.add_roles('member')
+        elif clashRole == 0:
+            await member.add_roles('not-in-clan')
+    asyncio.sleep(300)
+
 # Bot init
 @bot.event
 async def on_ready():
     logger.info('bot ready')
     if syncCommandsOnStart:
         await tree.sync()
+    asyncio.get_event_loop().create_task(updateRoles(bot.coc_client))
     await startWarSearch(bot.coc_client)
 
 # Coc API init
