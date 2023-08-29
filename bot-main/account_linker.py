@@ -29,7 +29,7 @@ class accountLink:
             player = await cc.get_player(player_tag=tag)
             if player.role.name == 'leader':
                 return 4
-            elif player.role.name == 'co-leader':
+            elif player.role.name == 'co_leader':
                 highestRole = 3
             elif player.role.name == 'elder' and highestRole < 2:
                 highestRole = 2

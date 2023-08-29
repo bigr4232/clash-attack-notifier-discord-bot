@@ -14,6 +14,7 @@ playersMissingAttacks = set()
 clan_tags = list()
 content = config_loader.loadYaml()
 updateAccounts()
+availableRoles = {'leader', 'co-leader', 'elder', 'member', 'not-in-clan'}
 roles = {'leader':0, 'co-leader':0, 'elder':0, 'member':0, 'not-in-clan':0}
 
 debugMode = False
@@ -105,7 +106,7 @@ async def removeFinishedAttackers(cc):
                 logger.debug(f'Removing {p}')
 
 # Return time in hour/min/sec as string from sec, round time to minutes
-def returnTime(seconds):
+async def returnTime(seconds):
     minutes = floor(seconds / 60)
     seconds -= minutes * 60
     hours = floor(minutes / 60)
@@ -217,23 +218,52 @@ async def on_member_join(member):
     if not silentMode:
         await member.send(newMemberMessage)
 
+# Update role if there is a change and remove old role
+async def userRoleUpdate(updatedRole, member):
+    for role in member.roles:
+        if role.name in availableRoles:
+            if role.name == updatedRole:
+                return
+            else:
+                await member.remove_roles(role)
+                await member.add_roles(discord.Object(id=roles[updatedRole]))
+                return
+    await member.add_roles(discord.Object(id=roles[updatedRole]))
+
+# Add roles to server if they don't exist
+@bot.event
+async def assignRoles():
+    rolesInServer = set()
+    guild = bot.get_guild(int(content['discordGuildID']))
+    for role in guild.roles:
+        if role.name in roles.keys():
+            rolesInServer.add(role.name)
+            roles[role.name] = role.id
+    if len(rolesInServer) != len(roles.keys()):
+        for role in roles.keys():
+            if role not in rolesInServer:
+                r = await guild.create_role(name=role)
+                roles[role] = r.id
+
 # Updates roles of each member in clan every 5 minutes
 async def updateRoles(cc):
-    for member in bot.get_all_members():
+    while True:
         clashRole = 0
-        if member.id in discordTagMapping.keys():
-            clashRole = await discordTagMapping[member.id].updateRole(cc)
-        if clashRole == 4:
-            await member.add_roles(discord.Object(id=roles['leader']))
-        elif clashRole == 3:
-            await member.add_roles(discord.Object(id=roles['co-leader']))
-        elif clashRole == 2:
-            await member.add_roles(discord.Object(id=roles['elder']))
-        elif clashRole == 1:
-            await member.add_roles(discord.Object(id=roles['member']))
-        elif clashRole == 0:
-            await member.add_roles(discord.Object(id=roles['not-in-clan']))
-    await asyncio.sleep(3000)
+        for member in bot.get_all_members():
+            if member.id in discordTagMapping.keys():
+                clashRole = await discordTagMapping[member.id].updateRole(cc)
+            if clashRole == 4:     
+                await userRoleUpdate('leader', member)
+            elif clashRole == 3:
+                await userRoleUpdate('co-leader', member)
+            elif clashRole == 2:
+                await userRoleUpdate('elder', member)
+            elif clashRole == 1:
+                await userRoleUpdate('member', member)
+            elif clashRole == 0:
+                await userRoleUpdate('not-in-clan', member)
+            clashRole = 0
+        await asyncio.sleep(300)
 
 @bot.event
 async def assignRoles():
