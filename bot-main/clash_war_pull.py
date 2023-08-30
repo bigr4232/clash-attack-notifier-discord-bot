@@ -225,9 +225,11 @@ async def userRoleUpdate(updatedRole, member):
             if role.name == updatedRole:
                 return
             else:
+                logger.debug(f'Updating role for {member.name} to {updatedRole}')
                 await member.remove_roles(role)
                 await member.add_roles(discord.Object(id=roles[updatedRole]))
                 return
+    logger.debug(f'Setting initial role for {member.name} to {updatedRole}')
     await member.add_roles(discord.Object(id=roles[updatedRole]))
 
 # Add roles to server if they don't exist
@@ -248,6 +250,7 @@ async def assignRoles():
 # Updates roles of each member in clan every 5 minutes
 async def updateRoles(cc):
     while True:
+        logger.debug('Updating discord roles')
         clashRole = 0
         for member in bot.get_all_members():
             if member.id in discordTagMapping.keys():
@@ -267,6 +270,7 @@ async def updateRoles(cc):
 
 @bot.event
 async def assignRoles():
+    logger.debug('Checking available roles in server')
     rolesInServer = set()
     guild = bot.get_guild(int(content['discordGuildID']))
     for role in guild.roles:
@@ -276,6 +280,7 @@ async def assignRoles():
     if len(rolesInServer) != len(roles.keys()):
         for role in roles.keys():
             if role not in rolesInServer:
+                logger.debug(f'Adding role {role} to server')
                 r = await guild.create_role(name=role)
                 roles[role] = r.id
 # Bot init
