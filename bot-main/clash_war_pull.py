@@ -298,12 +298,12 @@ async def main():
     async with coc.Client() as coc_client:
         try:
             await coc_client.login_with_tokens(content['clashToken'])
-        except coc.InvalidCredentials as error:
-            exit(error)
-
-        # Add the client session to the bot
-        bot.coc_client = coc_client
-        await bot.start(content['discordBotToken'])
+            # Add the client session to the bot
+            bot.coc_client = coc_client
+            await bot.start(content['discordBotToken'])
+        except:
+            asyncio.sleep(60)
+            await main()
 
 # Main to run main repeatedly with asyncio
 if __name__ == "__main__":
