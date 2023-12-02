@@ -1,5 +1,5 @@
 venv/
-.vscode/
 __pycache__/
 logs.log
 bot-main/testclient.py
+bot-main/clashapitesting.py
