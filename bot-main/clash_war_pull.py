@@ -10,6 +10,7 @@ from account_linker import discordTagMapping, clashTagMapping, updateAccounts
 import time
 
 # Globals
+__version__ = '1.1.1'
 playersMissingAttacks = set()
 clan_tags = list()
 content = config_loader.loadYaml()
@@ -283,6 +284,15 @@ async def assignRoles():
                 logger.debug(f'Adding role {role} to server')
                 r = await guild.create_role(name=role)
                 roles[role] = r.id
+    
+# Add ! commands for hidden commands
+@bot.event
+async def on_message(ctx):
+    if ctx.author.id == int(content['discordOwnerID']):
+        if ctx.content.startswith('!coc-bot'):
+            if ctx.content[9:] == 'version':
+                await ctx.channel.send(f'Version: {__version__}')
+
 # Bot init
 @bot.event
 async def on_ready():
