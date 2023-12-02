@@ -269,6 +269,7 @@ async def updateRoles(cc):
             clashRole = 0
         await asyncio.sleep(300)
 
+# Assign roles to user
 @bot.event
 async def assignRoles():
     logger.debug('Checking available roles in server')
