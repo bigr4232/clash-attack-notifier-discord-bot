@@ -293,6 +293,11 @@ async def on_ready():
     asyncio.get_event_loop().create_task(updateRoles(bot.coc_client))
     await startWarSearch(bot.coc_client)
 
+# Event to restart bot on maintenance
+@coc.ClientEvents.maintenance_completion()
+async def second_callback(time_started):
+    await startWarSearch(bot.coc_client)
+
 # Coc API init
 async def main():
     async with coc.Client() as coc_client:
