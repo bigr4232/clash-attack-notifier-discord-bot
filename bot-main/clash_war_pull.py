@@ -295,19 +295,20 @@ async def on_ready():
 
 # Event to restart bot on maintenance
 @coc.ClientEvents.maintenance_completion()
-async def second_callback(time_started):
+async def on_maintenance_completion(time_started):
     await startWarSearch(bot.coc_client)
 
 # Coc API init
 async def main():
-    async with coc.Client() as coc_client:
+    async with coc.EventsClient() as coc_client:
         try:
             await coc_client.login_with_tokens(content['clashToken'])
             # Add the client session to the bot
+            coc_client.add_events(on_maintenance_completion)
             bot.coc_client = coc_client
             await bot.start(content['discordBotToken'])
         except:
-            asyncio.sleep(60)
+            await asyncio.sleep(60)
             await main()
 
 # Main to run main repeatedly with asyncio
