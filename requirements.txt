@@ -1,4 +1,4 @@
-coc.py >= 3.0.0
+coc.py >= 3.2.1
 discord.py >= 2.3.0
 pytest >= 7.3.2
 pyyaml >= 6.0

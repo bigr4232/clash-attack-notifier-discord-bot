@@ -161,9 +161,9 @@ async def war_notifier(war, cc):
     war = await cc.get_current_war(content['clanTag'])
     timeleft = war.end_time.seconds_until
     while war.state == 'inWar' and timeleft <= actualTime:
-        war = await cc.get_current_war(content['clanTag'])
         timeleft = war.end_time.seconds_until
         await asyncio.sleep(300)
+        war = await cc.get_current_war(content['clanTag'])
     
 # Command to claim clash account. With no input of username, will use discord name from command issuer
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name')
@@ -307,18 +307,19 @@ async def on_ready():
 # Event to restart bot on maintenance
 @coc.ClientEvents.maintenance_completion()
 async def on_maintenance_completion(time_started):
-    await startWarSearch(bot.coc_client)
+    logger.debug('maint complete')
 
 # Coc API init
 async def main():
     async with coc.EventsClient() as coc_client:
         try:
             await coc_client.login_with_tokens(content['clashToken'])
-            # Add the client session to the bot
-            coc_client.add_events(on_maintenance_completion)
+            # Add the client session to the bot, uncomment if needed
+            # coc_client.add_events(on_maintenance_completion)
             bot.coc_client = coc_client
             await bot.start(content['discordBotToken'])
         except:
+            logger.debug('Caught error. Restarting in 60 seconds.')
             await asyncio.sleep(60)
             await main()
 
