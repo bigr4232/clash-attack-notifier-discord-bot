@@ -26,6 +26,7 @@ def updateFiles(dst):
     if not os.path.exists(botPath):
         os.makedirs(botPath)
     shutil.copy(os.path.abspath('bot-main/clash_war_pull.py'), os.path.join(botPath, 'clash_war_pull.py'))
+    shutil.copy(os.path.abspath('bot-main/account_linker.py'), os.path.join(botPath, 'account_linker.py'))
     shutil.copy('bot-main/config_loader.py', os.path.join(botPath, 'config_loader.py'))
     shutil.copy('docker-compose.yml', os.path.join(dst, 'docker-compose.yml'))
     shutil.copy('Dockerfile', os.path.join(dst, 'Dockerfile'))

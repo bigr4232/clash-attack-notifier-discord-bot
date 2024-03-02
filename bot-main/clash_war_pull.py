@@ -7,12 +7,16 @@ from math import floor
 import logging
 import sys
 from account_linker import discordTagMapping, clashTagMapping, updateAccounts
+import time
 
 # Globals
+__version__ = '1.1.2'
 playersMissingAttacks = set()
 clan_tags = list()
 content = config_loader.loadYaml()
 updateAccounts()
+availableRoles = {'leader', 'co-leader', 'elder', 'member', 'not-in-clan'}
+roles = {'leader':0, 'co-leader':0, 'elder':0, 'member':0, 'not-in-clan':0}
 
 debugMode = False
 silentMode = False
@@ -38,6 +42,8 @@ logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+intents.guilds = True
+intents.moderation = True
 bot = discord.Client(intents=intents)
 managers = {}
 tree = app_commands.CommandTree(bot)
@@ -83,7 +89,7 @@ async def new_war_start(cc, firstRun):
                     if discMember == member.tag and clashTagMapping[member.tag] not in notifiedPlayers:
                         if war.end_time.seconds_until > 80000 and not firstRun:
                             timeleft = await returnTime(war.end_time.seconds_until)
-                            await notifyUserStart(clashTagMapping[discMember], numAttacks, timeleft)
+                            await notifyUserStart(clashTagMapping[discMember].discordID, numAttacks, timeleft)
                         notifiedPlayers.add(clashTagMapping[member.tag])
         logger.debug('starting notifier')
         await war_notifier(war, cc)
@@ -100,19 +106,22 @@ async def removeFinishedAttackers(cc):
                 playersMissingAttacks.discard(p.tag)
                 logger.debug(f'Removing {p}')
 
-# Return time in hour/min/sec as string from sec
+# Return time in hour/min/sec as string from sec, round time to minutes
 async def returnTime(seconds):
     minutes = floor(seconds / 60)
     seconds -= minutes * 60
     hours = floor(minutes / 60)
     minutes -= hours * 60
+    if seconds >= 50:
+        minutes += 1
+        if minutes == 60:
+            minutes = 0
+            hours += 1
     remainingTime = ''
     if hours > 0:
         remainingTime += str(hours) + ' hours '
     if minutes > 0:
         remainingTime += str(minutes) + ' minutes '
-    if seconds > 0:
-        remainingTime += str(seconds) + ' seconds '
     remainingTime += 'remaining '
     logger.debug(f'time: {remainingTime}')
     return remainingTime
@@ -134,7 +143,7 @@ async def updateAndNotify(cc, time, timeLeft):
     for tag in playersMissingAttacks:
         for claimedMember in clashTagMapping.keys():
             if tag == claimedMember and clashTagMapping[claimedMember] not in notifiedPlayers:
-                await notifyUserAttackTime(clashTagMapping[claimedMember], remainingTime)
+                await notifyUserAttackTime(clashTagMapping[claimedMember].discordID, remainingTime)
                 notifiedPlayers.add(clashTagMapping[claimedMember])
     notifiedPlayers.clear()
     war = await cc.get_current_war(content['clanTag'])
@@ -152,11 +161,10 @@ async def war_notifier(war, cc):
     war = await cc.get_current_war(content['clanTag'])
     timeleft = war.end_time.seconds_until
     while war.state == 'inWar' and timeleft <= actualTime:
-        war = await cc.get_current_war(content['clanTag'])
         timeleft = war.end_time.seconds_until
         await asyncio.sleep(300)
+        war = await cc.get_current_war(content['clanTag'])
     
-
 # Command to claim clash account. With no input of username, will use discord name from command issuer
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name')
 async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
@@ -211,25 +219,109 @@ async def on_member_join(member):
     if not silentMode:
         await member.send(newMemberMessage)
 
+# Update role if there is a change and remove old role
+async def userRoleUpdate(updatedRole, member):
+    for role in member.roles:
+        if role.name in availableRoles:
+            if role.name == updatedRole:
+                return
+            else:
+                logger.debug(f'Updating role for {member.name} to {updatedRole}')
+                await member.remove_roles(role)
+                await member.add_roles(discord.Object(id=roles[updatedRole]))
+                return
+    logger.debug(f'Setting initial role for {member.name} to {updatedRole}')
+    await member.add_roles(discord.Object(id=roles[updatedRole]))
+
+# Add roles to server if they don't exist
+@bot.event
+async def assignRoles():
+    rolesInServer = set()
+    guild = bot.get_guild(int(content['discordGuildID']))
+    for role in guild.roles:
+        if role.name in roles.keys():
+            rolesInServer.add(role.name)
+            roles[role.name] = role.id
+    if len(rolesInServer) != len(roles.keys()):
+        for role in roles.keys():
+            if role not in rolesInServer:
+                r = await guild.create_role(name=role)
+                roles[role] = r.id
+
+# Updates roles of each member in clan every 5 minutes
+async def updateRoles(cc):
+    while True:
+        logger.debug('Updating discord roles')
+        clashRole = 0
+        for member in bot.get_all_members():
+            if member.id in discordTagMapping.keys():
+                clashRole = await discordTagMapping[member.id].updateRole(cc)
+            if clashRole == 4:     
+                await userRoleUpdate('leader', member)
+            elif clashRole == 3:
+                await userRoleUpdate('co-leader', member)
+            elif clashRole == 2:
+                await userRoleUpdate('elder', member)
+            elif clashRole == 1:
+                await userRoleUpdate('member', member)
+            elif clashRole == 0:
+                await userRoleUpdate('not-in-clan', member)
+            clashRole = 0
+        await asyncio.sleep(300)
+
+# Assign roles to user
+@bot.event
+async def assignRoles():
+    logger.debug('Checking available roles in server')
+    rolesInServer = set()
+    guild = bot.get_guild(int(content['discordGuildID']))
+    for role in guild.roles:
+        if role.name in roles.keys():
+            rolesInServer.add(role.name)
+            roles[role.name] = role.id
+    if len(rolesInServer) != len(roles.keys()):
+        for role in roles.keys():
+            if role not in rolesInServer:
+                logger.debug(f'Adding role {role} to server')
+                r = await guild.create_role(name=role)
+                roles[role] = r.id
+    
+# Add ! commands for hidden commands
+@bot.event
+async def on_message(ctx):
+    if ctx.author.id == int(content['discordOwnerID']):
+        if ctx.content.startswith('!coc-bot'):
+            if ctx.content[9:] == 'version':
+                await ctx.channel.send(f'Version: {__version__}')
+
 # Bot init
 @bot.event
 async def on_ready():
     logger.info('bot ready')
+    await assignRoles()
     if syncCommandsOnStart:
         await tree.sync()
+    asyncio.get_event_loop().create_task(updateRoles(bot.coc_client))
     await startWarSearch(bot.coc_client)
+
+# Event to restart bot on maintenance
+@coc.ClientEvents.maintenance_completion()
+async def on_maintenance_completion(time_started):
+    logger.debug('maint complete')
 
 # Coc API init
 async def main():
-    async with coc.Client() as coc_client:
+    async with coc.EventsClient() as coc_client:
         try:
             await coc_client.login_with_tokens(content['clashToken'])
-        except coc.InvalidCredentials as error:
-            exit(error)
-
-        # Add the client session to the bot
-        bot.coc_client = coc_client
-        await bot.start(content['discordBotToken'])
+            # Add the client session to the bot, uncomment if needed
+            # coc_client.add_events(on_maintenance_completion)
+            bot.coc_client = coc_client
+            await bot.start(content['discordBotToken'])
+        except:
+            logger.debug('Caught error. Restarting in 60 seconds.')
+            await asyncio.sleep(60)
+            await main()
 
 # Main to run main repeatedly with asyncio
 if __name__ == "__main__":
