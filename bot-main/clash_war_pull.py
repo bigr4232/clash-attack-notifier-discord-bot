@@ -81,7 +81,7 @@ async def new_war_start(cc, firstRun):
                 playersMissingAttacks.add(member.tag)
                 for discMember in clashTagMapping.keys():
                     if discMember == member.tag and clashTagMapping[member.tag] not in notifiedPlayers:
-                        if war.end_time.seconds_until > 80000 or not firstRun:
+                        if war.end_time.seconds_until > 80000 and not firstRun:
                             timeleft = await returnTime(war.end_time.seconds_until)
                             await notifyUserStart(clashTagMapping[discMember], numAttacks, timeleft)
                         notifiedPlayers.add(clashTagMapping[member.tag])
@@ -190,7 +190,7 @@ async def sendWelcomeCommand(ctx:discord.Interaction, username:str):
 # Send dm to user that war has started
 @bot.event
 async def notifyUserStart(userid:int, numattacks:str, remainingtime:str):
-    user = await bot.fetch_user(userid)
+    user = await bot.fetch_user(userid.discordID)
     if not silentMode:
         await user.send(f'War has started and you are in it. You have {remainingtime} to attack {numattacks} times')
     logger.debug(f'notified {user.name} war has started')
