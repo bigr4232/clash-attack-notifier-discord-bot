@@ -87,7 +87,7 @@ async def new_war_start(cc, firstRun):
                 playersMissingAttacks.add(member.tag)
                 for discMember in clashTagMapping.keys():
                     if discMember == member.tag and clashTagMapping[member.tag] not in notifiedPlayers:
-                        if war.end_time.seconds_until > 80000 and not firstRun:
+                        if war.end_time.seconds_until > 82800 or not firstRun:
                             timeleft = await returnTime(war.end_time.seconds_until)
                             await notifyUserStart(clashTagMapping[discMember].discordID, numAttacks, timeleft)
                         notifiedPlayers.add(clashTagMapping[member.tag])
