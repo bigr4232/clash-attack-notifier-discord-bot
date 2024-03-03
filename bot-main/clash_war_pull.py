@@ -200,8 +200,11 @@ async def sendWelcomeCommand(ctx:discord.Interaction, username:str):
 async def notifyUserStart(userid:int, numattacks:str, remainingtime:str):
     user = await bot.fetch_user(userid)
     logger.debug(f'Notifying {user.name} war has started')
-    if not silentMode:
-        await user.send(f'War has started and you are in it. You have {remainingtime} to attack {numattacks} times')
+    try:
+        if not silentMode:
+            await user.send(f'War has started and you are in it. You have {remainingtime}to attack {numattacks} times')
+    except:
+        logger.debug(f'Unable to notify {user.name}')
 
 # Send dm to user to get attack in
 @bot.event
