@@ -210,17 +210,23 @@ async def notifyUserStart(userid:int, numattacks:str, remainingtime:str):
 @bot.event
 async def notifyUserAttackTime(userid:int, remainingtime:str):
     user = await bot.fetch_user(userid)
-    if not silentMode:
-        await user.send(f'{remainingtime} to get attack in')
-    logger.debug(f'notified {user.name} to get attack in')
+    logger.debug(f'notifying {user.name} to get attack in')
+    try:
+        if not silentMode:
+            await user.send(f'{remainingtime} to get attack in')
+    except:
+        logger.debug(f'Unable to notify {user.name}')
 
 # Send message to new member
 @bot.event
 async def on_member_join(member):
     newMemberMessage = (f'Hello {member.name}, Welcome to the Natty Daddy discord Server\n\nPlease claim your account in clash by using the command /claimaccount [clashtag]. This can be messaged to me here or placed in the server in any channel. Multiple accounts can be added one at a time\n\nExample: /claimaccount #859404klj')
     logger.debug(f'Sending welcome message to {member.name}')
-    if not silentMode:
-        await member.send(newMemberMessage)
+    try:
+        if not silentMode:
+            await member.send(newMemberMessage)
+    except:
+        logger.debug(f'Unable to notify {member.name}')
 
 # Update role if there is a change and remove old role
 async def userRoleUpdate(updatedRole, member):
