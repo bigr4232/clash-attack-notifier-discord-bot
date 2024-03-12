@@ -7,7 +7,6 @@ from math import floor
 import logging
 import sys
 from account_linker import discordTagMapping, clashTagMapping, updateAccounts
-import time
 
 # Globals
 __version__ = '1.1.6'
