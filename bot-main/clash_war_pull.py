@@ -55,45 +55,54 @@ async def startWarSearch(cc):
         logger.debug('Checking war status')
         await new_war_prep(cc, firstRun)
         firstRun = False
+        logger.debug('Checking again in 5 minutes')
         await asyncio.sleep(600)
 
 # Runs on prep day, calls start if cwl
 async def new_war_prep(cc, firstRun):
-    war = await cc.get_current_war(content['clanTag'])
-    if war == None:
-        return
-    if war.state == 'preparation':
-        logger.debug('In preparation')
-        inPrep = True
-        while inPrep:
-            await asyncio.sleep(war.end_time.seconds_until - 86400)
-            inPrep = await new_war_start(cc, firstRun)
-            war = await cc.get_current_war(content['clanTag'])
-    elif war.state == 'inWar':
-        await new_war_start(cc, firstRun)
+    try:
+        war = await cc.get_current_war(content['clanTag'])
+        if war == None:
+            return
+        if war.state == 'preparation':
+            logger.debug('In preparation')
+            inPrep = True
+            while inPrep:
+                await asyncio.sleep(war.end_time.seconds_until - 86400)
+                inPrep = await new_war_start(cc, firstRun)
+                war = await cc.get_current_war(content['clanTag'])
+        elif war.state == 'inWar':
+            await new_war_start(cc, firstRun)
+    except coc.Maintenance:
+        logger.debug('Coc api under maintenance')
 
 # Runs on war day
 async def new_war_start(cc, firstRun):
-    war = await cc.get_current_war(content['clanTag'])
-    if war.state == 'inWar':
-        numAttacks = str(war.attacks_per_member)
-        logger.debug('adding players to list')
-        playersMissingAttacks.clear()
-        notifiedPlayers = set()
-        notifiedPlayers.clear()
-        for member in war.members:
-            if member.clan.tag == content['clanTag']:
-                playersMissingAttacks.add(member.tag)
-                for discMember in clashTagMapping.keys():
-                    if discMember == member.tag and clashTagMapping[member.tag] not in notifiedPlayers:
-                        if war.end_time.seconds_until > 82800 or not firstRun:
-                            timeleft = await returnTime(war.end_time.seconds_until)
-                            await notifyUserStart(clashTagMapping[discMember].discordID, numAttacks, timeleft)
-                        notifiedPlayers.add(clashTagMapping[member.tag])
-        logger.debug('starting notifier')
-        await war_notifier(war, cc)
-        return False
-    return True
+    try:
+        war = await cc.get_current_war(content['clanTag'])
+        if war.state == 'inWar':
+            numAttacks = str(war.attacks_per_member)
+            logger.debug('adding players to list')
+            playersMissingAttacks.clear()
+            notifiedPlayers = set()
+            notifiedPlayers.clear()
+            for member in war.members:
+                if member.clan.tag == content['clanTag']:
+                    playersMissingAttacks.add(member.tag)
+                    for discMember in clashTagMapping.keys():
+                        if discMember == member.tag and clashTagMapping[member.tag] not in notifiedPlayers:
+                            if war.end_time.seconds_until > 82800 or not firstRun:
+                                timeleft = await returnTime(war.end_time.seconds_until)
+                                await notifyUserStart(clashTagMapping[discMember].discordID, numAttacks, timeleft)
+                            notifiedPlayers.add(clashTagMapping[member.tag])
+            logger.debug('starting notifier')
+            await war_notifier(war, cc)
+            return False
+        return True
+    except coc.Maintenance:
+        logger.debug('Coc api under maintenance. Trying again in 10 minutes.')
+        await asyncio.sleep(600)
+        await new_war_start(cc, firstRun)
 
 # Remove users who have attacked from players list
 async def removeFinishedAttackers(cc):
@@ -128,26 +137,31 @@ async def returnTime(seconds):
 # Update the players list and notify users that haven't attacked
 # Wait in asyncio.sleep for amount of time passed in
 async def updateAndNotify(cc, time, timeLeft):
-    logger.debug('waiting till next notification interval')
-    war = await cc.get_current_war(content['clanTag'])
-    if war.end_time.seconds_until - time >= 0:
-        await asyncio.sleep(war.end_time.seconds_until - time)
-    war = await cc.get_current_war(content['clanTag'])
-    timeLeft = war.end_time.seconds_until
-    logger.debug(f'notify with time {timeLeft}')
-    await removeFinishedAttackers(cc)
-    remainingTime = await returnTime(timeLeft)
-    notifiedPlayers = set()
-    logger.debug('send notifications')
-    for tag in playersMissingAttacks:
-        for claimedMember in clashTagMapping.keys():
-            if tag == claimedMember and clashTagMapping[claimedMember] not in notifiedPlayers:
-                await notifyUserAttackTime(clashTagMapping[claimedMember].discordID, remainingTime)
-                notifiedPlayers.add(clashTagMapping[claimedMember])
-    notifiedPlayers.clear()
-    war = await cc.get_current_war(content['clanTag'])
-    timeLeft = war.end_time.seconds_until
-    return timeLeft
+    try:
+        logger.debug('waiting till next notification interval')
+        war = await cc.get_current_war(content['clanTag'])
+        if war.end_time.seconds_until - time >= 0:
+            await asyncio.sleep(war.end_time.seconds_until - time)
+        war = await cc.get_current_war(content['clanTag'])
+        timeLeft = war.end_time.seconds_until
+        logger.debug(f'notify with time {timeLeft}')
+        await removeFinishedAttackers(cc)
+        remainingTime = await returnTime(timeLeft)
+        notifiedPlayers = set()
+        logger.debug('send notifications')
+        for tag in playersMissingAttacks:
+            for claimedMember in clashTagMapping.keys():
+                if tag == claimedMember and clashTagMapping[claimedMember] not in notifiedPlayers:
+                    await notifyUserAttackTime(clashTagMapping[claimedMember].discordID, remainingTime)
+                    notifiedPlayers.add(clashTagMapping[claimedMember])
+        notifiedPlayers.clear()
+        war = await cc.get_current_war(content['clanTag'])
+        timeLeft = war.end_time.seconds_until
+        return timeLeft
+    except coc.Maintenance:
+        logger.debug('Coc api under maintenance. Trying again in 5 minutes.')
+        await asyncio.sleep(300)
+        await updateAndNotify(cc, time, timeLeft)
 
 # Sends notifications to players who haven't attacked at each interval
 async def war_notifier(war, cc):
