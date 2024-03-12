@@ -10,7 +10,7 @@ from account_linker import discordTagMapping, clashTagMapping, updateAccounts
 import time
 
 # Globals
-__version__ = '1.1.5'
+__version__ = '1.1.6'
 playersMissingAttacks = set()
 clan_tags = list()
 content = config_loader.loadYaml()
@@ -262,20 +262,23 @@ async def updateRoles(cc):
     while True:
         logger.debug('Updating discord roles')
         clashRole = 0
-        for member in bot.get_all_members():
-            if member.id in discordTagMapping.keys():
-                clashRole = await discordTagMapping[member.id].updateRole(cc)
-            if clashRole == 4:     
-                await userRoleUpdate('leader', member)
-            elif clashRole == 3:
-                await userRoleUpdate('co-leader', member)
-            elif clashRole == 2:
-                await userRoleUpdate('elder', member)
-            elif clashRole == 1:
-                await userRoleUpdate('member', member)
-            elif clashRole == 0:
-                await userRoleUpdate('not-in-clan', member)
-            clashRole = 0
+        try:
+            for member in bot.get_all_members():
+                if member.id in discordTagMapping.keys():
+                    clashRole = await discordTagMapping[member.id].updateRole(cc)
+                if clashRole == 4:     
+                    await userRoleUpdate('leader', member)
+                elif clashRole == 3:
+                    await userRoleUpdate('co-leader', member)
+                elif clashRole == 2:
+                    await userRoleUpdate('elder', member)
+                elif clashRole == 1:
+                    await userRoleUpdate('member', member)
+                elif clashRole == 0:
+                    await userRoleUpdate('not-in-clan', member)
+                clashRole = 0
+        except coc.Maintenance:
+            logger.debug('Coc api under maintenance. Trying again in 5 minutes.')
         await asyncio.sleep(300)
 
 # Assign roles to user
