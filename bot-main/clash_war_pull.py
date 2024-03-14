@@ -226,7 +226,7 @@ async def notifyUserAttackTime(userid:int, remainingtime:str):
     logger.debug(f'notifying {user.name} to get attack in')
     try:
         if not silentMode:
-            await user.send(f'{remainingtime} to get attack in')
+            await user.send(f'{remainingtime}to get attack in')
     except:
         logger.debug(f'Unable to notify {user.name}')
 
