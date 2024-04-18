@@ -1,7 +1,7 @@
 version: '3.4'
 
 services:
-  steamauthkeydiscordbot:
+  clashdiscordbot:
     image: clash-attack-notifier
     container_name: clash-attack-notifier
     build:
