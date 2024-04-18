@@ -9,7 +9,7 @@ import sys
 from account_linker import discordTagMapping, clashTagMapping, updateAccounts
 
 # Globals
-__version__ = '1.1.6'
+__version__ = '1.1.7'
 playersMissingAttacks = set()
 clan_tags = list()
 content = config_loader.loadYaml()
