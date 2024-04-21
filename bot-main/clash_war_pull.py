@@ -293,6 +293,8 @@ async def updateRoles(cc):
                 clashRole = 0
         except coc.Maintenance:
             logger.debug('Coc api under maintenance. Trying again in 5 minutes.')
+        except coc.GatewayError:
+            logger.debug('Gateway error, retrying in 5 minutes.')
         await asyncio.sleep(300)
 
 # Assign roles to user
