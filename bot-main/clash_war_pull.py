@@ -9,7 +9,7 @@ import sys
 from account_linker import discordTagMapping, clashTagMapping, updateAccounts
 
 # Globals
-__version__ = '1.1.8'
+__version__ = '1.1.9'
 playersMissingAttacks = set()
 clan_tags = list()
 content = config_loader.loadYaml()
@@ -76,9 +76,11 @@ async def new_war_prep(cc, firstRun):
             await new_war_start(cc, firstRun)
     except coc.Maintenance:
         logger.debug('Coc api under maintenance')
+        global errorRestart
         errorRestart = True
     except coc.GatewayError:
         logger.debug('Gateway error')
+        global errorRestart
         errorRestart = True
 
 # Runs on war day
