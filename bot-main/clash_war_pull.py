@@ -16,6 +16,7 @@ content = config_loader.loadYaml()
 updateAccounts()
 availableRoles = {'leader', 'co-leader', 'elder', 'member', 'not-in-clan'}
 roles = {'leader':0, 'co-leader':0, 'elder':0, 'member':0, 'not-in-clan':0}
+errorRestart = False
 
 debugMode = False
 silentMode = False
@@ -75,34 +76,34 @@ async def new_war_prep(cc, firstRun):
             await new_war_start(cc, firstRun)
     except coc.Maintenance:
         logger.debug('Coc api under maintenance')
+        errorRestart = True
+    except coc.GatewayError:
+        logger.debug('Gateway error')
+        errorRestart = True
 
 # Runs on war day
 async def new_war_start(cc, firstRun):
-    try:
-        war = await cc.get_current_war(content['clanTag'])
-        if war.state == 'inWar':
-            numAttacks = str(war.attacks_per_member)
-            logger.debug('adding players to list')
-            playersMissingAttacks.clear()
-            notifiedPlayers = set()
-            notifiedPlayers.clear()
-            for member in war.members:
-                if member.clan.tag == content['clanTag']:
-                    playersMissingAttacks.add(member.tag)
-                    for discMember in clashTagMapping.keys():
-                        if discMember == member.tag and clashTagMapping[member.tag] not in notifiedPlayers:
-                            if war.end_time.seconds_until > 82800 or not firstRun:
-                                timeleft = await returnTime(war.end_time.seconds_until)
-                                await notifyUserStart(clashTagMapping[discMember].discordID, numAttacks, timeleft)
-                            notifiedPlayers.add(clashTagMapping[member.tag])
-            logger.debug('starting notifier')
-            await war_notifier(war, cc)
-            return False
-        return True
-    except coc.Maintenance:
-        logger.debug('Coc api under maintenance. Trying again in 10 minutes.')
-        await asyncio.sleep(600)
-        await new_war_start(cc, firstRun)
+    war = await cc.get_current_war(content['clanTag'])
+    if war.state == 'inWar':
+        numAttacks = str(war.attacks_per_member)
+        logger.debug('adding players to list')
+        playersMissingAttacks.clear()
+        notifiedPlayers = set()
+        notifiedPlayers.clear()
+        for member in war.members:
+            if member.clan.tag == content['clanTag']:
+                playersMissingAttacks.add(member.tag)
+                for discMember in clashTagMapping.keys():
+                    if discMember == member.tag and clashTagMapping[member.tag] not in notifiedPlayers:
+                        if war.end_time.seconds_until > 82800 and not firstRun and not errorRestart:
+                            timeleft = await returnTime(war.end_time.seconds_until)
+                            await notifyUserStart(clashTagMapping[discMember].discordID, numAttacks, timeleft)
+                        notifiedPlayers.add(clashTagMapping[member.tag])
+        logger.debug('starting notifier')
+        errorRestart = False
+        await war_notifier(war, cc)
+        return False
+    return True
 
 # Remove users who have attacked from players list
 async def removeFinishedAttackers(cc):
@@ -137,31 +138,26 @@ async def returnTime(seconds):
 # Update the players list and notify users that haven't attacked
 # Wait in asyncio.sleep for amount of time passed in
 async def updateAndNotify(cc, time, timeLeft):
-    try:
-        logger.debug('waiting till next notification interval')
-        war = await cc.get_current_war(content['clanTag'])
-        if war.end_time.seconds_until - time >= 0:
-            await asyncio.sleep(war.end_time.seconds_until - time)
-        war = await cc.get_current_war(content['clanTag'])
-        timeLeft = war.end_time.seconds_until
-        logger.debug(f'notify with time {timeLeft}')
-        await removeFinishedAttackers(cc)
-        remainingTime = await returnTime(timeLeft)
-        notifiedPlayers = set()
-        logger.debug('send notifications')
-        for tag in playersMissingAttacks:
-            for claimedMember in clashTagMapping.keys():
-                if tag == claimedMember and clashTagMapping[claimedMember] not in notifiedPlayers:
-                    await notifyUserAttackTime(clashTagMapping[claimedMember].discordID, remainingTime)
-                    notifiedPlayers.add(clashTagMapping[claimedMember])
-        notifiedPlayers.clear()
-        war = await cc.get_current_war(content['clanTag'])
-        timeLeft = war.end_time.seconds_until
-        return timeLeft
-    except coc.Maintenance:
-        logger.debug('Coc api under maintenance. Trying again in 5 minutes.')
-        await asyncio.sleep(300)
-        await updateAndNotify(cc, time, timeLeft)
+    logger.debug('waiting till next notification interval')
+    war = await cc.get_current_war(content['clanTag'])
+    if war.end_time.seconds_until - time >= 0:
+        await asyncio.sleep(war.end_time.seconds_until - time)
+    war = await cc.get_current_war(content['clanTag'])
+    timeLeft = war.end_time.seconds_until
+    logger.debug(f'notify with time {timeLeft}')
+    await removeFinishedAttackers(cc)
+    remainingTime = await returnTime(timeLeft)
+    notifiedPlayers = set()
+    logger.debug('send notifications')
+    for tag in playersMissingAttacks:
+        for claimedMember in clashTagMapping.keys():
+            if tag == claimedMember and clashTagMapping[claimedMember] not in notifiedPlayers:
+                await notifyUserAttackTime(clashTagMapping[claimedMember].discordID, remainingTime)
+                notifiedPlayers.add(clashTagMapping[claimedMember])
+    notifiedPlayers.clear()
+    war = await cc.get_current_war(content['clanTag'])
+    timeLeft = war.end_time.seconds_until
+    return timeLeft
 
 # Sends notifications to players who haven't attacked at each interval
 async def war_notifier(war, cc):
@@ -295,6 +291,8 @@ async def updateRoles(cc):
             logger.debug('Coc api under maintenance. Trying again in 5 minutes.')
         except coc.GatewayError:
             logger.debug('Gateway error, retrying in 5 minutes.')
+        except Exception as e:
+            logger.debug(f'Exception found\n{e}')
         await asyncio.sleep(300)
 
 # Assign roles to user
