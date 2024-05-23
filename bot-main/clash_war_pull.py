@@ -61,6 +61,7 @@ async def startWarSearch(cc):
 
 # Runs on prep day, calls start if cwl
 async def new_war_prep(cc, firstRun):
+    global errorRestart
     try:
         war = await cc.get_current_war(content['clanTag'])
         if war == None:
@@ -76,11 +77,9 @@ async def new_war_prep(cc, firstRun):
             await new_war_start(cc, firstRun)
     except coc.Maintenance:
         logger.debug('Coc api under maintenance')
-        global errorRestart
         errorRestart = True
     except coc.GatewayError:
         logger.debug('Gateway error')
-        global errorRestart
         errorRestart = True
 
 # Runs on war day
@@ -92,6 +91,7 @@ async def new_war_start(cc, firstRun):
         playersMissingAttacks.clear()
         notifiedPlayers = set()
         notifiedPlayers.clear()
+        global errorRestart
         for member in war.members:
             if member.clan.tag == content['clanTag']:
                 playersMissingAttacks.add(member.tag)
