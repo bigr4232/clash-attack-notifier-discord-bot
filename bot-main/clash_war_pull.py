@@ -337,6 +337,8 @@ async def on_ready():
     if not war_search_task_started:
         war_search_task_started = True
         asyncio.get_event_loop().create_task(startWarSearch(bot.coc_client))
+    else:
+        logger.debug('war search task already started')
 
 # Event to restart bot on maintenance
 @coc.ClientEvents.maintenance_completion()
