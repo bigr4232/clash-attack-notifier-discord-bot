@@ -18,6 +18,9 @@ availableRoles = {'leader', 'co-leader', 'elder', 'member', 'not-in-clan'}
 roles = {'leader':0, 'co-leader':0, 'elder':0, 'member':0, 'not-in-clan':0}
 errorRestart = False
 
+# Guard variable to prevent multiple war notifier threads
+war_search_task_started = False
+
 debugMode = False
 silentMode = False
 syncCommandsOnStart = False
@@ -330,7 +333,10 @@ async def on_ready():
     if syncCommandsOnStart:
         await tree.sync()
     asyncio.get_event_loop().create_task(updateRoles(bot.coc_client))
-    await startWarSearch(bot.coc_client)
+    global war_search_task_started
+    if not war_search_task_started:
+        war_search_task_started = True
+        asyncio.get_event_loop().create_task(startWarSearch(bot.coc_client))
 
 # Event to restart bot on maintenance
 @coc.ClientEvents.maintenance_completion()
