@@ -7,6 +7,7 @@ from math import floor
 import logging
 import sys
 from account_linker import discordTagMapping, clashTagMapping, updateAccounts
+import time
 
 # Globals
 __version__ = '1.1.10'
@@ -345,23 +346,23 @@ async def on_ready():
 async def on_maintenance_completion(time_started):
     logger.debug('maint complete')
 
+
 # Coc API init
 async def main():
     async with coc.EventsClient() as coc_client:
-        try:
-            await coc_client.login_with_tokens(content['clashToken'])
-            # Add the client session to the bot, uncomment if needed
-            # coc_client.add_events(on_maintenance_completion)
-            bot.coc_client = coc_client
-            await bot.start(content['discordBotToken'])
-        except:
-            logger.debug('Caught error. Restarting in 60 seconds.')
-            await asyncio.sleep(60)
-            await main()
+        await coc_client.login_with_tokens(content['clashToken'])
+        # Add the client session to the bot, uncomment if needed
+        # coc_client.add_events(on_maintenance_completion)
+        bot.coc_client = coc_client
+        await bot.start(content['discordBotToken'])
 
 # Main to run main repeatedly with asyncio
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        pass
+    while True:
+        try:
+            asyncio.run(main())
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            logger.debug(f"Main crashed with error: {e}. Restarting in 60 seconds.")
+            time.sleep(60)
