@@ -22,6 +22,9 @@ errorRestart = False
 # Guard variable to prevent multiple war notifier threads
 war_search_task_started = False
 
+# Guard variable to prevent multiple updateRoles threads
+updateRoles_task_started = False
+
 debugMode = False
 silentMode = False
 syncCommandsOnStart = False
@@ -333,7 +336,12 @@ async def on_ready():
     await assignRoles()
     if syncCommandsOnStart:
         await tree.sync()
-    asyncio.get_event_loop().create_task(updateRoles(bot.coc_client))
+    global updateRoles_task_started
+    if not updateRoles_task_started:
+        updateRoles_task_started = True
+        asyncio.get_event_loop().create_task(updateRoles(bot.coc_client))
+    else:
+        logger.debug('updateRoles task already started')
     global war_search_task_started
     if not war_search_task_started:
         war_search_task_started = True
