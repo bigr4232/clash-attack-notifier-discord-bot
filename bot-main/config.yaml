@@ -1,6 +1,7 @@
 clanMembers:
 clanTag: '#'
-clashToken: 
+clashAPIUsername:
+clashAPIPassword:
 discordBotToken: 
 discordChannel: ''
 discordGuildID: ''

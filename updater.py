@@ -12,12 +12,13 @@ logger.setLevel(logging.INFO)
 
 def updateYaml():
     clantag = input('Enter clan tag for clan to track: ')
-    clashtoken = input('Enter your clash of clans api token: ')
+    clashapiusername = input('Enter your clash of clans api username: ')
+    clashapipassword = input('Enter your clash of clans api password: ')
     discordbottoken = input('Enter the token for the discord bot to use: ')
     discordchannel = input('Enter the id for the default war channel for the bot: ')
     discordguildid = input('Enter the id of the server/guild that the bot will be in: ')
     discordownerid = input('Enter the discord id of the bot owner for admin commands: ')
-    setYaml(clantag, clashtoken, discordbottoken, discordchannel, discordguildid, discordownerid)
+    setYaml(clantag, clashapiusername, clashapipassword, discordbottoken, discordchannel, discordguildid, discordownerid)
 
 def updateFiles(dst):
     ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
