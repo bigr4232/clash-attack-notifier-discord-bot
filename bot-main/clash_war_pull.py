@@ -358,7 +358,7 @@ async def on_maintenance_completion(time_started):
 # Coc API init
 async def main():
     async with coc.EventsClient() as coc_client:
-        await coc_client.login(content['clashapiusername'], content['clashapipassword'])
+        await coc_client.login(content['clashAPIUsername'], content['clashAPIPassword'])
         # Add the client session to the bot, uncomment if needed
         # coc_client.add_events(on_maintenance_completion)
         bot.coc_client = coc_client
