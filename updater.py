@@ -56,8 +56,8 @@ def main():
     for i in range(len(sys.argv)):
         if sys.argv[i] == '-dir' and len(sys.argv) >= i+1:
             dst = sys.argv[i+1]
-    if dst[:0] == '/' or dst[:0] == '\\':
-        dst = dst[:-1]
+    if dst.startswith('/') or dst.startswith('\\'):
+        dst = dst[1:]
     updateFiles(dst)
     logger.info('Update complete')
 

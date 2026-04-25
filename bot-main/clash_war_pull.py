@@ -77,7 +77,8 @@ async def new_war_prep(cc, firstRun):
             logger.debug('In preparation')
             inPrep = True
             while inPrep:
-                await asyncio.sleep(war.end_time.seconds_until - 86400)
+                sleep_time = max(0, war.end_time.seconds_until - 86400)
+                await asyncio.sleep(sleep_time)
                 inPrep = await new_war_start(cc, firstRun)
                 war = await cc.get_current_war(content['clanTag'])
         elif war.state == 'inWar':
@@ -260,21 +261,6 @@ async def userRoleUpdate(updatedRole, member):
                 return
     logger.debug(f'Setting initial role for {member.name} to {updatedRole}')
     await member.add_roles(discord.Object(id=roles[updatedRole]))
-
-# Add roles to server if they don't exist
-@bot.event
-async def assignRoles():
-    rolesInServer = set()
-    guild = bot.get_guild(int(content['discordGuildID']))
-    for role in guild.roles:
-        if role.name in roles.keys():
-            rolesInServer.add(role.name)
-            roles[role.name] = role.id
-    if len(rolesInServer) != len(roles.keys()):
-        for role in roles.keys():
-            if role not in rolesInServer:
-                r = await guild.create_role(name=role)
-                roles[role] = r.id
 
 # Updates roles of each member in clan every 5 minutes
 async def updateRoles(cc):

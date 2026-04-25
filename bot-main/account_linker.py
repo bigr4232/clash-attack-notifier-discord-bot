@@ -39,15 +39,16 @@ class accountLink:
 
 def updateAccounts():
     for clashid in content['clanMembers'].keys():
-        acc = accountLink(discordID=content['clanMembers'][clashid])
-        if acc in discordAccounts:
-            discordTagMapping[content['clanMembers'][clashid]].addClashTagTarget(clashid, [])
-            discordAccounts.add(acc)
-            clashTagMapping.update({clashid:acc})
+        discord_id = content['clanMembers'][clashid]
+        existing = discordTagMapping.get(discord_id)
+        if existing:
+            existing.addClashTagTarget(clashid, [])
+            clashTagMapping[clashid] = existing
         else:
+            acc = accountLink(discordID=discord_id)
             acc.addClashTagTarget(clashid, [])
             discordAccounts.add(acc)
-            clashTagMapping.update({clashid:acc})
-            discordTagMapping.update({content['clanMembers'][clashid]:acc})
+            clashTagMapping[clashid] = acc
+            discordTagMapping[discord_id] = acc
 
 updateAccounts()
