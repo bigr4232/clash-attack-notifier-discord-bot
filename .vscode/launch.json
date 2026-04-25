@@ -20,6 +20,33 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": ["--silent", "-d"]
+        },
+        {
+            "name": "Python: Run Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "tests/",
+                "-v",
+                "--tb=short"
+            ]
+        },
+        {
+            "name": "Python: Run Tests (Debug)",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "tests/",
+                "-v",
+                "-s",
+                "--tb=long"
+            ]
         }
     ]
 }
