@@ -297,6 +297,9 @@ async def assignRoles():
     logger.debug('Checking available roles in server')
     rolesInServer = set()
     guild = bot.get_guild(int(content['discordGuildID']))
+    if not guild:
+        logger.warning('Guild not found in cache, skipping role assignment')
+        return
     for role in guild.roles:
         if role.name in roles.keys():
             rolesInServer.add(role.name)
