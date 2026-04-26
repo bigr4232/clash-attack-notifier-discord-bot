@@ -103,12 +103,12 @@ async def new_war_start(cc, firstRun):
         for member in war.members:
             if member.clan.tag == content['clanTag']:
                 playersMissingAttacks.add(member.tag)
-                for discMember in clashTagMapping.keys():
-                    if discMember == member.tag and clashTagMapping[member.tag] not in notifiedPlayers:
-                        if war.end_time.seconds_until > 82800 and not firstRun and not errorRestart:
-                            timeleft = await returnTime(war.end_time.seconds_until)
-                            await notifyUserStart(clashTagMapping[discMember].discordID, numAttacks, timeleft)
-                        notifiedPlayers.add(clashTagMapping[member.tag])
+                acc = clashTagMapping.get(member.tag)  # O(1) lookup instead of O(M) inner loop
+                if acc and acc not in notifiedPlayers:
+                    if war.end_time.seconds_until > 82800 and not firstRun and not errorRestart:
+                        timeleft = returnTime(war.end_time.seconds_until)
+                        await notifyUserStart(acc.discordID, numAttacks, timeleft)
+                    notifiedPlayers.add(acc)
         logger.debug('starting notifier')
         errorRestart = False
         await war_notifier(war, cc)
@@ -116,9 +116,10 @@ async def new_war_start(cc, firstRun):
     return True
 
 # Remove users who have attacked from players list
-async def removeFinishedAttackers(cc):
+async def removeFinishedAttackers(cc, war=None):
     logger.debug('remove users who have attacked')
-    war = await cc.get_current_war(content['clanTag'])
+    if war is None:
+        war = await cc.get_current_war(content['clanTag'])
     for p in war.members:
         if p.clan.tag == content['clanTag']:
             if len(p.attacks) == war.attacks_per_member:
@@ -126,7 +127,7 @@ async def removeFinishedAttackers(cc):
                 logger.debug(f'Removing {p}')
 
 # Return time in hour/min/sec as string from sec, round time to minutes
-async def returnTime(seconds):
+def returnTime(seconds):
     minutes = floor(seconds / 60)
     seconds -= minutes * 60
     hours = floor(minutes / 60)
@@ -155,18 +156,17 @@ async def updateAndNotify(cc, time, timeLeft):
     war = await cc.get_current_war(content['clanTag'])
     timeLeft = war.end_time.seconds_until
     logger.debug(f'notify with time {timeLeft}')
-    await removeFinishedAttackers(cc)
-    remainingTime = await returnTime(timeLeft)
+    await removeFinishedAttackers(cc, war)
+    remainingTime = returnTime(timeLeft)
     notifiedPlayers = set()
     logger.debug('send notifications')
     for tag in playersMissingAttacks:
-        for claimedMember in clashTagMapping.keys():
-            if tag == claimedMember and clashTagMapping[claimedMember] not in notifiedPlayers:
-                await notifyUserAttackTime(clashTagMapping[claimedMember].discordID, remainingTime)
-                notifiedPlayers.add(clashTagMapping[claimedMember])
+        acc = clashTagMapping.get(tag)  # O(1) lookup instead of O(M) inner loop
+        if acc and acc not in notifiedPlayers:
+            await notifyUserAttackTime(acc.discordID, remainingTime)
+            notifiedPlayers.add(acc)
     notifiedPlayers.clear()
-    war = await cc.get_current_war(content['clanTag'])
-    timeLeft = war.end_time.seconds_until
+    timeLeft = war.end_time.seconds_until  # Reuse existing war object instead of fetching again
     return timeLeft
 
 # Sends notifications to players who haven't attacked at each interval
@@ -268,18 +268,19 @@ async def updateRoles(cc):
         logger.debug('Updating discord roles')
         clashRole = 0
         try:
-            for member in bot.get_all_members():
-                if member.id in discordTagMapping.keys():
-                    clashRole = await discordTagMapping[member.id].updateRole(cc)
-                if clashRole == 4:     
+            for member_id in discordTagMapping.keys():
+                member = bot.get_member(member_id)  # O(1) cache lookup instead of iterating all members
+                if member:
+                    clashRole = await discordTagMapping[member_id].updateRole(cc)
+                if clashRole == 4 and member:
                     await userRoleUpdate('leader', member)
-                elif clashRole == 3:
+                elif clashRole == 3 and member:
                     await userRoleUpdate('co-leader', member)
-                elif clashRole == 2:
+                elif clashRole == 2 and member:
                     await userRoleUpdate('elder', member)
-                elif clashRole == 1:
+                elif clashRole == 1 and member:
                     await userRoleUpdate('member', member)
-                elif clashRole == 0:
+                elif clashRole == 0 and member:
                     await userRoleUpdate('not-in-clan', member)
                 clashRole = 0
         except coc.Maintenance:
