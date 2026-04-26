@@ -84,11 +84,15 @@ async def new_war_prep(cc, firstRun):
         elif war.state == 'inWar':
             await new_war_start(cc, firstRun)
     except coc.Maintenance:
-        logger.debug('Coc api under maintenance')
+        logger.warning('CoC API under maintenance - waiting for recovery')
         errorRestart = True
+        await asyncio.sleep(300)
+        return  # Let the main loop retry
     except coc.GatewayError:
-        logger.debug('Gateway error')
+        logger.warning('Gateway error - waiting for recovery')
         errorRestart = True
+        await asyncio.sleep(300)
+        return  # Let the main loop retry
 
 # Runs on war day
 async def new_war_start(cc, firstRun):
