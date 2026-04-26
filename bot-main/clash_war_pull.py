@@ -223,8 +223,10 @@ async def notifyUserStart(userid:int, numattacks:str, remainingtime:str):
     try:
         if not silentMode:
             await user.send(f'War has started and you are in it. You have {remainingtime}to attack {numattacks} times')
-    except:
-        logger.debug(f'Unable to notify {user.name}')
+    except discord.Forbidden:
+        logger.info(f'{user.name} has DMs disabled, cannot send notification')
+    except discord.HTTPException as e:
+        logger.error(f'Failed to notify {user.name}: {e}')
 
 # Send dm to user to get attack in
 @bot.event
@@ -234,8 +236,10 @@ async def notifyUserAttackTime(userid:int, remainingtime:str):
     try:
         if not silentMode:
             await user.send(f'{remainingtime}to get attack in')
-    except:
-        logger.debug(f'Unable to notify {user.name}')
+    except discord.Forbidden:
+        logger.info(f'{user.name} has DMs disabled, cannot send notification')
+    except discord.HTTPException as e:
+        logger.error(f'Failed to notify {user.name}: {e}')
 
 # Send message to new member
 @bot.event
@@ -245,8 +249,10 @@ async def on_member_join(member):
     try:
         if not silentMode:
             await member.send(newMemberMessage)
-    except:
-        logger.debug(f'Unable to notify {member.name}')
+    except discord.Forbidden:
+        logger.info(f'{member.name} has DMs disabled, cannot send welcome message')
+    except discord.HTTPException as e:
+        logger.error(f'Failed to send welcome message to {member.name}: {e}')
 
 # Update role if there is a change and remove old role
 async def userRoleUpdate(updatedRole, member):
