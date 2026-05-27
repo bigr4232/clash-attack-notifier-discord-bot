@@ -16,7 +16,7 @@ def addUser(discordName, clashTag):
     with open('bot-main/config.yaml', 'w') as config:
         yaml.safe_dump(content, config)
 
-def setYaml(clantag, clashapiusername, clashapipassword, discordbottoken, discordchannel, discordguildid, discordowner):
+def setYaml(clantag, clashapiusername, clashapipassword, discordbottoken, discordchannel, discordguildid, discordowner, config_path='bot-main/config.yaml'):
     content = loadYaml()
     if clantag[0] != '#':
         clantag = f'#{clantag}'
@@ -27,7 +27,23 @@ def setYaml(clantag, clashapiusername, clashapipassword, discordbottoken, discor
     content['discordChannel'] = discordchannel
     content['discordGuildID'] = discordguildid
     content['discordOwnerID'] = discordowner
-    with open('bot-main/config.yaml', 'w') as config:
+    with open(config_path, 'w') as config:
+        yaml.safe_dump(content, config)
+
+def createConfig(clantag, clashapiusername, clashapipassword, discordbottoken, discordchannel, discordguildid, discordowner, config_path='bot-main/config.yaml'):
+    if clantag[0] != '#':
+        clantag = f'#{clantag}'
+    content = {
+        'clanTag': clantag,
+        'clashAPIUsername': clashapiusername,
+        'clashAPIPassword': clashapipassword,
+        'discordBotToken': discordbottoken,
+        'discordChannel': discordchannel,
+        'discordGuildID': discordguildid,
+        'discordOwnerID': discordowner,
+        'clanMembers': {}
+    }
+    with open(config_path, 'w') as config:
         yaml.safe_dump(content, config)
 
 def loadAndUpdateAccounts(accounts):

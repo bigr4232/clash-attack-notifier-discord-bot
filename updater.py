@@ -5,12 +5,12 @@ import shutil
 from file_exceptions import *
 
 sys.path.append('bot-main')
-from config_loader import setYaml
+from config_loader import createConfig
 
 logger = logging.getLogger('logs')
 logger.setLevel(logging.INFO)
 
-def updateYaml():
+def updateYaml(config_path):
     clantag = input('Enter clan tag for clan to track: ')
     clashapiusername = input('Enter your clash of clans api username: ')
     clashapipassword = input('Enter your clash of clans api password: ')
@@ -18,7 +18,7 @@ def updateYaml():
     discordchannel = input('Enter the id for the default war channel for the bot: ')
     discordguildid = input('Enter the id of the server/guild that the bot will be in: ')
     discordownerid = input('Enter the discord id of the bot owner for admin commands: ')
-    setYaml(clantag, clashapiusername, clashapipassword, discordbottoken, discordchannel, discordguildid, discordownerid)
+    createConfig(clantag, clashapiusername, clashapipassword, discordbottoken, discordchannel, discordguildid, discordownerid, config_path)
 
 def updateFiles(dst):
     ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -32,9 +32,8 @@ def updateFiles(dst):
     shutil.copy('docker-compose.yml', os.path.join(dst, 'docker-compose.yml'))
     shutil.copy('Dockerfile', os.path.join(dst, 'Dockerfile'))
     shutil.copy('requirements.txt', os.path.join(dst, 'requirements.txt'))
-    if not os.path.exists(dst + '/bot-main/config.yaml'):
-        updateYaml()
-        shutil.copy('bot-main/config.yaml', os.path.join(botPath, 'config.yaml'))
+    if not os.path.exists(os.path.join(botPath, 'config.yaml')):
+        updateYaml(os.path.join(botPath, 'config.yaml'))
 
 def main():
     logger.info('Updating files to version in this folder')
