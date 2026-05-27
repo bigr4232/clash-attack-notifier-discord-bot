@@ -5,6 +5,7 @@ from discord import app_commands
 import config_loader
 from math import floor
 import logging
+import aiohttp.client_exceptions
 import sys
 from account_linker import discordTagMapping, clashTagMapping, updateAccounts
 import time
@@ -60,11 +61,15 @@ async def startWarSearch(cc):
     logger.info('Starting war notifier')
     firstRun = True
     while True:
-        logger.debug('Checking war status')
-        await new_war_prep(cc, firstRun)
-        firstRun = False
-        logger.debug('Checking again in 5 minutes')
-        await asyncio.sleep(600)
+        try:
+            logger.debug('Checking war status')
+            await new_war_prep(cc, firstRun)
+            firstRun = False
+            logger.debug('Checking again in 5 minutes')
+            await asyncio.sleep(600)
+        except Exception as e:
+            logger.error(f'War search task crashed unexpectedly: {e}. Restarting in 30s.')
+            await asyncio.sleep(30)
 
 # Runs on prep day, calls start if cwl
 async def new_war_prep(cc, firstRun):
@@ -87,37 +92,53 @@ async def new_war_prep(cc, firstRun):
         logger.warning('CoC API under maintenance - waiting for recovery')
         errorRestart = True
         await asyncio.sleep(300)
-        return  # Let the main loop retry
+        return
     except coc.GatewayError:
         logger.warning('Gateway error - waiting for recovery')
         errorRestart = True
         await asyncio.sleep(300)
-        return  # Let the main loop retry
+        return
+    except aiohttp.client_exceptions.ClientConnectorDNSError as e:
+        logger.warning(f'DNS resolution failed: {e}. Waiting 60s before retry.')
+        errorRestart = True
+        await asyncio.sleep(60)
+        return
+    except aiohttp.client_exceptions.ClientConnectorError as e:
+        logger.warning(f'Connection error: {e}. Waiting 30s before retry.')
+        errorRestart = True
+        await asyncio.sleep(30)
+        return
 
 # Runs on war day
 async def new_war_start(cc, firstRun):
-    war = await cc.get_current_war(content['clanTag'])
-    if war.state == 'inWar':
-        numAttacks = str(war.attacks_per_member)
-        logger.debug('adding players to list')
-        playersMissingAttacks.clear()
-        notifiedPlayers = set()
-        notifiedPlayers.clear()
-        global errorRestart
-        for member in war.members:
-            if member.clan.tag == content['clanTag']:
-                playersMissingAttacks.add(member.tag)
-                acc = clashTagMapping.get(member.tag)  # O(1) lookup instead of O(M) inner loop
-                if acc and acc not in notifiedPlayers:
-                    if war.end_time.seconds_until > 82800 and not firstRun and not errorRestart:
-                        timeleft = returnTime(war.end_time.seconds_until)
-                        await notifyUserStart(acc.discordID, numAttacks, timeleft)
-                    notifiedPlayers.add(acc)
-        logger.debug('starting notifier')
-        errorRestart = False
-        await war_notifier(war, cc)
-        return False
-    return True
+    try:
+        war = await cc.get_current_war(content['clanTag'])
+        if war.state == 'inWar':
+            numAttacks = str(war.attacks_per_member)
+            logger.debug('adding players to list')
+            playersMissingAttacks.clear()
+            notifiedPlayers = set()
+            notifiedPlayers.clear()
+            global errorRestart
+            for member in war.members:
+                if member.clan.tag == content['clanTag']:
+                    playersMissingAttacks.add(member.tag)
+                    acc = clashTagMapping.get(member.tag)  # O(1) lookup instead of O(M) inner loop
+                    if acc and acc not in notifiedPlayers:
+                        if war.end_time.seconds_until > 82800 and not firstRun and not errorRestart:
+                            timeleft = returnTime(war.end_time.seconds_until)
+                            await notifyUserStart(acc.discordID, numAttacks, timeleft)
+                        notifiedPlayers.add(acc)
+            logger.debug('starting notifier')
+            errorRestart = False
+            await war_notifier(war, cc)
+            return False
+        return True
+    except Exception as e:
+        logger.error(f'War start check failed: {e}. Waiting 60s before retry.')
+        errorRestart = True
+        await asyncio.sleep(60)
+        return True
 
 # Remove users who have attacked from players list
 async def removeFinishedAttackers(cc, war=None):
@@ -175,19 +196,22 @@ async def updateAndNotify(cc, time, timeLeft):
 
 # Sends notifications to players who haven't attacked at each interval
 async def war_notifier(war, cc):
-    notificationIntervals = [43200, 18000, 10800, 7200, 3600, 1800, 900]
-    actualTime = war.end_time.seconds_until
-    for time in notificationIntervals:
-        if actualTime > time:
-            actualTime = await updateAndNotify(cc, time, actualTime)
-    await asyncio.sleep(1000)
-    war = await cc.get_current_war(content['clanTag'])
-    if war != None:
-        timeleft = war.end_time.seconds_until
-        while war.state == 'inWar' and timeleft <= actualTime:
+    try:
+        notificationIntervals = [43200, 18000, 10800, 7200, 3600, 1800, 900]
+        actualTime = war.end_time.seconds_until
+        for time in notificationIntervals:
+            if actualTime > time:
+                actualTime = await updateAndNotify(cc, time, actualTime)
+        await asyncio.sleep(1000)
+        war = await cc.get_current_war(content['clanTag'])
+        if war != None:
             timeleft = war.end_time.seconds_until
-            await asyncio.sleep(300)
-            war = await cc.get_current_war(content['clanTag'])
+            while war.state == 'inWar' and timeleft <= actualTime:
+                timeleft = war.end_time.seconds_until
+                await asyncio.sleep(300)
+                war = await cc.get_current_war(content['clanTag'])
+    except Exception as e:
+        logger.error(f'War notifier crashed unexpectedly: {e}. War notifications may be incomplete.')
     
 # Command to claim clash account. With no input of username, will use discord name from command issuer
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name')
@@ -294,9 +318,13 @@ async def updateRoles(cc):
                     await userRoleUpdate('not-in-clan', member)
                 clashRole = 0
         except coc.Maintenance:
-            logger.debug('Coc api under maintenance. Trying again in 5 minutes.')
+            logger.debug('CoC API under maintenance. Trying again in 5 minutes.')
         except coc.GatewayError:
             logger.debug('Gateway error, retrying in 5 minutes.')
+        except aiohttp.client_exceptions.ClientConnectorDNSError as e:
+            logger.warning(f'DNS resolution failed during role update: {e}. Retrying in 5 minutes.')
+        except aiohttp.client_exceptions.ClientConnectorError as e:
+            logger.warning(f'Connection error during role update: {e}. Retrying in 5 minutes.')
         except Exception as e:
             logger.debug(f'Exception found\n{e}')
         await asyncio.sleep(300)
