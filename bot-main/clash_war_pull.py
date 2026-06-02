@@ -55,6 +55,7 @@ root_logger = logging.getLogger()
 root_logger.setLevel(logging.INFO)
 root_logger.addHandler(stream_handler)
 logger.addHandler(stream_handler)
+logger.propagate = False
 
 # Intents and tree inits
 intents = discord.Intents.default()
