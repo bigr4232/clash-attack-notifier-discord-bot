@@ -30,12 +30,19 @@ debugMode = False
 silentMode = False
 syncCommandsOnStart = False
 # Logging
+class LocalTimeFormatter(logging.Formatter):
+    converter = time.localtime
+
+formatter = LocalTimeFormatter('%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
 logger = logging.getLogger('logs')
 for arg in sys.argv:
     if arg == '-d':
         logger.setLevel(logging.DEBUG)
         fh = logging.FileHandler('logs.log')
         fh.setLevel(logging.DEBUG)
+        fh.setFormatter(formatter)
         logger.addHandler(fh)
         debugMode = True
     if arg == '--silent':
@@ -44,7 +51,10 @@ for arg in sys.argv:
         syncCommandsOnStart = True
 if not debugMode:
     logger.setLevel(logging.INFO)
-logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+root_logger.addHandler(stream_handler)
+logger.addHandler(stream_handler)
 
 # Intents and tree inits
 intents = discord.Intents.default()

@@ -1,14 +1,22 @@
 import sys
 import os
 import logging
+import time
 import shutil
 from file_exceptions import *
 
 sys.path.append('bot-main')
 from config_loader import createConfig
 
+class LocalTimeFormatter(logging.Formatter):
+    converter = time.localtime
+
+formatter = LocalTimeFormatter('%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
 logger = logging.getLogger('logs')
 logger.setLevel(logging.INFO)
+logger.addHandler(stream_handler)
 
 def updateYaml(config_path):
     clantag = input('Enter clan tag for clan to track: ')
