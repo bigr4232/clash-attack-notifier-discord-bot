@@ -303,7 +303,8 @@ async def updateRoles(cc):
         clashRole = 0
         try:
             for member_id in discordTagMapping.keys():
-                member = bot.get_member(member_id)  # O(1) cache lookup instead of iterating all members
+                guild = bot.get_guild(int(content['discordGuildID']))
+                member = guild.get_member(member_id) if guild else None  # get_member is on Guild, not Client in discord.py 2.x
                 if member:
                     clashRole = await discordTagMapping[member_id].updateRole(cc)
                 if clashRole == 4 and member:
