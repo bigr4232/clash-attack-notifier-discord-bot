@@ -6,3 +6,7 @@ services:
       context: .
       dockerfile: ./Dockerfile
     restart: unless-stopped
+    # Relative to this compose file's directory, so it is correct at any install
+    # location. Keeps accounts claimed via /claimaccount from being lost on rebuild.
+    volumes:
+      - ./bot-main/config.yaml:/app/bot-main/config.yaml

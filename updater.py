@@ -5,7 +5,7 @@ import time
 import shutil
 from file_exceptions import *
 
-sys.path.append('bot-main')
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bot-main'))
 from config_loader import createConfig
 
 class LocalTimeFormatter(logging.Formatter):
@@ -34,14 +34,22 @@ def updateFiles(dst):
     botPath = os.path.join(dst, 'bot-main')
     if not os.path.exists(botPath):
         os.makedirs(botPath)
-    shutil.copy(os.path.abspath('bot-main/clash_war_pull.py'), os.path.join(botPath, 'clash_war_pull.py'))
-    shutil.copy(os.path.abspath('bot-main/account_linker.py'), os.path.join(botPath, 'account_linker.py'))
-    shutil.copy('bot-main/config_loader.py', os.path.join(botPath, 'config_loader.py'))
-    shutil.copy('docker-compose.yml', os.path.join(dst, 'docker-compose.yml'))
-    shutil.copy('Dockerfile', os.path.join(dst, 'Dockerfile'))
-    shutil.copy('requirements.txt', os.path.join(dst, 'requirements.txt'))
-    if not os.path.exists(os.path.join(botPath, 'config.yaml')):
-        updateYaml(os.path.join(botPath, 'config.yaml'))
+    # Sources are resolved against this file, not the shell's working directory,
+    # so the updater can be run from anywhere
+    shutil.copy(os.path.join(ROOT_DIR, 'bot-main', 'clash_war_pull.py'), os.path.join(botPath, 'clash_war_pull.py'))
+    shutil.copy(os.path.join(ROOT_DIR, 'bot-main', 'account_linker.py'), os.path.join(botPath, 'account_linker.py'))
+    shutil.copy(os.path.join(ROOT_DIR, 'bot-main', 'config_loader.py'), os.path.join(botPath, 'config_loader.py'))
+    shutil.copy(os.path.join(ROOT_DIR, 'docker-compose.yml'), os.path.join(dst, 'docker-compose.yml'))
+    shutil.copy(os.path.join(ROOT_DIR, 'Dockerfile'), os.path.join(dst, 'Dockerfile'))
+    shutil.copy(os.path.join(ROOT_DIR, 'requirements.txt'), os.path.join(dst, 'requirements.txt'))
+    configPath = os.path.join(botPath, 'config.yaml')
+    # Docker creates an empty directory at a bind mount target that has no file to
+    # bind to. Clear it so the config is a real file the container can read and write.
+    if os.path.isdir(configPath):
+        logger.info('config.yaml is a directory left behind by a bind mount, replacing it with a config file')
+        os.rmdir(configPath)
+    if not os.path.exists(configPath):
+        updateYaml(configPath)
 
 def main():
     logger.info('Updating files to version in this folder')

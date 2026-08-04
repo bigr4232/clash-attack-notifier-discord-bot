@@ -16,7 +16,7 @@ def addUser(discordName, clashTag):
         clashTag = f'#{clashTag}'
     with open(_CONFIG_PATH, 'r') as config:
         content = yaml.safe_load(config)
-        if content['clanMembers'] == None:
+        if content.get('clanMembers') == None:
             content['clanMembers'] = dict()
         content['clanMembers'].update({clashTag: discordName})
     with open(_CONFIG_PATH, 'w') as config:

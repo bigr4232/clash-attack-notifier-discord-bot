@@ -227,9 +227,16 @@ async def war_notifier(war, cc):
 # Command to claim clash account. With no input of username, will use discord name from command issuer
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name')
 async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
+    logger.info(f'{ctx.user.name} ({ctx.user.id}) is claiming account {clashtag}')
+    try:
+        config_loader.addUser(ctx.user.id, clashtag)
+        updateAccounts()
+    except Exception as e:
+        logger.error(f'Failed to claim account {clashtag} for {ctx.user.name}: {e}')
+        await ctx.response.send_message(f'Failed to claim account {clashtag}, please try again later', delete_after=30)
+        return
+    logger.info(f'Claimed account {clashtag} for {ctx.user.name}, tracking {len(clashTagMapping)} clash accounts')
     await ctx.response.send_message(f"Claiming account {clashtag} for {ctx.user.name}", delete_after=300)
-    config_loader.addUser(ctx.user.id, clashtag)
-    updateAccounts()
 
 # Command to sync new slash commands
 @tree.command(name='sync-commands', description='command to sync new slash commands')
@@ -313,11 +320,12 @@ async def updateRoles(cc):
         logger.debug('Updating discord roles')
         clashRole = 0
         try:
-            for member_id in discordTagMapping.keys():
+            # Snapshot the mapping, /claimaccount can add to it while this loop awaits
+            for member_id, acc in list(discordTagMapping.items()):
                 guild = bot.get_guild(int(content['discordGuildID']))
                 member = guild.get_member(member_id) if guild else None  # get_member is on Guild, not Client in discord.py 2.x
                 if member:
-                    clashRole = await discordTagMapping[member_id].updateRole(cc)
+                    clashRole = await acc.updateRole(cc)
                 if clashRole == 4 and member:
                     await userRoleUpdate('leader', member)
                 elif clashRole == 3 and member:

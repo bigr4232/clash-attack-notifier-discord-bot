@@ -38,8 +38,12 @@ class accountLink:
         return highestRole
 
 def updateAccounts():
-    for clashid in content['clanMembers'].keys():
-        discord_id = content['clanMembers'][clashid]
+    # Reload from disk so accounts claimed after startup are picked up
+    global content
+    content = config_loader.loadYaml()
+    clanMembers = content.get('clanMembers') or {}
+    for clashid in clanMembers.keys():
+        discord_id = clanMembers[clashid]
         existing = discordTagMapping.get(discord_id)
         if existing:
             existing.addClashTagTarget(clashid, [])
