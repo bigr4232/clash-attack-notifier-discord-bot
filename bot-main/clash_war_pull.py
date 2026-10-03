@@ -412,13 +412,13 @@ async def main():
         bot.coc_client = coc_client
         await bot.start(content['discordBotToken'])
 
-# Main to run main repeatedly with asyncio
+# Run once. On a fatal error exit non-zero so Docker's restart policy starts a clean process;
+# the discord.Client can't be reused after its event loop closes.
 if __name__ == "__main__":
-    while True:
-        try:
-            asyncio.run(main())
-        except KeyboardInterrupt:
-            break
-        except Exception as e:
-            logger.debug(f"Main crashed with error: {e}. Restarting in 60 seconds.")
-            time.sleep(60)
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        logger.critical(f'Main crashed with error: {e}. Exiting so the container restarts.', exc_info=True)
+        sys.exit(1)
