@@ -20,11 +20,8 @@ availableRoles = {'leader', 'co-leader', 'elder', 'member', 'not-in-clan'}
 roles = {'leader':0, 'co-leader':0, 'elder':0, 'member':0, 'not-in-clan':0}
 errorRestart = False
 
-# Guard variable to prevent multiple war notifier threads
-war_search_task_started = False
-
-# Guard variable to prevent multiple updateRoles threads
-updateRoles_task_started = False
+# Background task handles, kept so the tasks aren't garbage-collected and can be restarted
+background_tasks = {}
 
 debugMode = False
 silentMode = False
@@ -377,25 +374,42 @@ async def on_message(ctx):
             if ctx.content[9:] == 'version':
                 await ctx.channel.send(f'Version: {__version__}')
 
+# Start a background task unless it's already running. If it ever ends, log it and start it again.
+def startBackgroundTask(name, coro_factory):
+    task = background_tasks.get(name)
+    if task and not task.done():
+        logger.debug(f'{name} task already running')
+        return
+    task = asyncio.get_running_loop().create_task(coro_factory(), name=name)
+    task.add_done_callback(lambda t: onBackgroundTaskDone(name, coro_factory, t))
+    background_tasks[name] = task
+
+def onBackgroundTaskDone(name, coro_factory, task):
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc:
+        logger.error(f'{name} task crashed: {exc!r}. Restarting it.', exc_info=exc)
+    else:
+        logger.error(f'{name} task exited unexpectedly. Restarting it.')
+    startBackgroundTask(name, coro_factory)
+
 # Bot init
 @bot.event
 async def on_ready():
     logger.info('bot ready')
-    await assignRoles()
+    # Start the war notifier first so role setup problems can never block it
+    startBackgroundTask('war search', lambda: startWarSearch(bot.coc_client))
+    startBackgroundTask('update roles', lambda: updateRoles(bot.coc_client))
+    try:
+        await assignRoles()
+    except Exception as e:
+        logger.error(f'Role setup failed, role sync will not work until this is fixed: {e}', exc_info=True)
     if syncCommandsOnStart:
-        await tree.sync()
-    global updateRoles_task_started
-    if not updateRoles_task_started:
-        updateRoles_task_started = True
-        asyncio.get_event_loop().create_task(updateRoles(bot.coc_client))
-    else:
-        logger.debug('updateRoles task already started')
-    global war_search_task_started
-    if not war_search_task_started:
-        war_search_task_started = True
-        asyncio.get_event_loop().create_task(startWarSearch(bot.coc_client))
-    else:
-        logger.debug('war search task already started')
+        try:
+            await tree.sync()
+        except Exception as e:
+            logger.error(f'Failed to sync slash commands: {e}', exc_info=True)
 
 # Event to restart bot on maintenance
 @coc.ClientEvents.maintenance_completion()
