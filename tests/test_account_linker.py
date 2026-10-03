@@ -175,6 +175,114 @@ class TestAccountLinkUpdateRole:
         acc = accountLink(discordID=200002)
         result = await acc.updateRole(None)
         assert result == 0
+    
+    @staticmethod
+    def _player(clan_tag, role_name):
+        """Fake player with a clan.tag (or None) and a role.name (or None)."""
+        from types import SimpleNamespace
+        return SimpleNamespace(
+            clan=SimpleNamespace(tag=clan_tag) if clan_tag is not None else None,
+            role=SimpleNamespace(name=role_name) if role_name is not None else None,
+        )
+    
+    @staticmethod
+    def _fake_cc(players):
+        """Fake cc: get_player returns players[tag], raises coc.NotFound for unknown tags."""
+        import coc
+        
+        class FakeCC:
+            async def get_player(self, player_tag):
+                if player_tag in players:
+                    return players[player_tag]
+                raise coc.NotFound('no such tag')
+        return FakeCC()
+    
+    @pytest.mark.asyncio
+    async def test_update_role_co_leader_beats_member(self, monkeypatch):
+        """co-leader + member in the clan -> 3 (co-leader wins)."""
+        import account_linker
+        from account_linker import accountLink
+        
+        monkeypatch.setitem(account_linker.content, 'clanTag', '#CLAN')
+        players = {
+            '#TAG1': self._player('#CLAN', 'co_leader'),
+            '#TAG2': self._player('#CLAN', 'member'),
+        }
+        acc = accountLink(discordID=200101)
+        acc.addClashTagTarget('#TAG1', [])
+        acc.addClashTagTarget('#TAG2', [])
+        result = await acc.updateRole(self._fake_cc(players))
+        assert result == 3
+    
+    @pytest.mark.asyncio
+    async def test_update_role_elder_beats_member(self, monkeypatch):
+        """member + elder in the clan -> 2 (elder wins)."""
+        import account_linker
+        from account_linker import accountLink
+        
+        monkeypatch.setitem(account_linker.content, 'clanTag', '#CLAN')
+        players = {
+            '#TAG1': self._player('#CLAN', 'member'),
+            '#TAG2': self._player('#CLAN', 'elder'),
+        }
+        acc = accountLink(discordID=200102)
+        acc.addClashTagTarget('#TAG1', [])
+        acc.addClashTagTarget('#TAG2', [])
+        result = await acc.updateRole(self._fake_cc(players))
+        assert result == 2
+    
+    @pytest.mark.asyncio
+    async def test_update_role_leader(self, monkeypatch):
+        """leader in the clan -> 4."""
+        import account_linker
+        from account_linker import accountLink
+        
+        monkeypatch.setitem(account_linker.content, 'clanTag', '#CLAN')
+        players = {'#TAG1': self._player('#CLAN', 'leader')}
+        acc = accountLink(discordID=200103)
+        acc.addClashTagTarget('#TAG1', [])
+        result = await acc.updateRole(self._fake_cc(players))
+        assert result == 4
+    
+    @pytest.mark.asyncio
+    async def test_update_role_leader_in_other_clan(self, monkeypatch):
+        """leader in a different clan -> 0 (outside the bot's clan)."""
+        import account_linker
+        from account_linker import accountLink
+        
+        monkeypatch.setitem(account_linker.content, 'clanTag', '#CLAN')
+        players = {'#TAG1': self._player('#OTHER', 'leader')}
+        acc = accountLink(discordID=200104)
+        acc.addClashTagTarget('#TAG1', [])
+        result = await acc.updateRole(self._fake_cc(players))
+        assert result == 0
+    
+    @pytest.mark.asyncio
+    async def test_update_role_player_outside_clan(self, monkeypatch):
+        """player not in any clan (clan=None, role=None) -> 0."""
+        import account_linker
+        from account_linker import accountLink
+        
+        monkeypatch.setitem(account_linker.content, 'clanTag', '#CLAN')
+        players = {'#TAG1': self._player(None, None)}
+        acc = accountLink(discordID=200105)
+        acc.addClashTagTarget('#TAG1', [])
+        result = await acc.updateRole(self._fake_cc(players))
+        assert result == 0
+    
+    @pytest.mark.asyncio
+    async def test_update_role_skips_not_found_tag(self, monkeypatch):
+        """one missing tag is skipped, the other (elder in the clan) still counts -> 2."""
+        import account_linker
+        from account_linker import accountLink
+        
+        monkeypatch.setitem(account_linker.content, 'clanTag', '#CLAN')
+        players = {'#TAG2': self._player('#CLAN', 'elder')}
+        acc = accountLink(discordID=200106)
+        acc.addClashTagTarget('#TAG1', [])  # not in players -> coc.NotFound
+        acc.addClashTagTarget('#TAG2', [])
+        result = await acc.updateRole(self._fake_cc(players))
+        assert result == 2
 
 
 class TestAccountLinkSetOperations:

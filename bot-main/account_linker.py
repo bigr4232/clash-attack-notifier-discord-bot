@@ -1,4 +1,8 @@
+import logging
+import coc
 import config_loader
+
+logger = logging.getLogger('logs')
 
 clashTagMapping = dict()
 discordTagMapping = dict()
@@ -23,18 +27,20 @@ class accountLink:
         if tag not in self.tags:
             self.tags.update({tag:target})
     
+    # Highest role across this user's accounts in the bot's clan: 4 leader, 3 co-leader, 2 elder, 1 member, 0 not in clan
     async def updateRole(self, cc):
+        roleRanks = {'leader': 4, 'co_leader': 3, 'elder': 2, 'member': 1}
         highestRole = 0
-        for tag in self.tags:
-            player = await cc.get_player(player_tag=tag)
-            if player.role.name == 'leader':
-                return 4
-            elif player.role.name == 'co_leader':
-                highestRole = 3
-            elif player.role.name == 'elder' and highestRole < 2:
-                highestRole = 2
-            else:
-                highestRole = 1
+        for tag in list(self.tags):
+            try:
+                player = await cc.get_player(player_tag=tag)
+            except coc.NotFound:
+                logger.warning(f'Clash account {tag} claimed by {self.discordID} was not found, skipping it')
+                continue
+            # Accounts outside the bot's clan don't count
+            if player.clan is None or player.role is None or player.clan.tag != content['clanTag']:
+                continue
+            highestRole = max(highestRole, roleRanks.get(player.role.name, 1))
         return highestRole
 
 def updateAccounts():
