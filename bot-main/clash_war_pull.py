@@ -219,6 +219,13 @@ async def war_notifier(war, cc):
     except Exception as e:
         logger.error(f'War notifier crashed unexpectedly: {e}. War notifications may be incomplete.', exc_info=True)
     
+# True if userId is the configured bot owner. A blank or invalid discordOwnerID matches nobody.
+def isOwner(userId):
+    try:
+        return userId == int(content['discordOwnerID'])
+    except (KeyError, TypeError, ValueError):
+        return False
+
 # Command to claim clash account. With no input of username, will use discord name from command issuer
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name')
 async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
@@ -236,7 +243,7 @@ async def claimAccountCommand(ctx: discord.Interaction, clashtag:str):
 # Command to sync new slash commands
 @tree.command(name='sync-commands', description='command to sync new slash commands')
 async def syncCommands(ctx: discord.Interaction):
-    if ctx.user.id == int(content['discordOwnerID']):
+    if isOwner(ctx.user.id):
         await tree.sync()
         await ctx.response.send_message('Commands synced', delete_after=30)
     else:
@@ -245,7 +252,7 @@ async def syncCommands(ctx: discord.Interaction):
 # Command to send intro message to someone manually
 @tree.command(name='send-welcome-message', description='send welcome message to specified user')
 async def sendWelcomeCommand(ctx:discord.Interaction, username:str):
-    if ctx.user.id == int(content['discordOwnerID']):
+    if isOwner(ctx.user.id):
         for member in tree.client.users:
             if member.name == username:
                 newMemberMessage = (f'Hello {member.name}, Welcome to the Natty Daddy discord Server\n\nPlease claim your account in clash by using the command /claimaccount [clashtag]. This can be messaged to me here or placed in the server in any channel. Multiple accounts can be added one at a time\n\nExample: /claimaccount #859404klj')
@@ -313,27 +320,26 @@ async def userRoleUpdate(updatedRole, member):
 
 # Updates roles of each member in clan every 5 minutes
 async def updateRoles(cc):
+    clashRoleNames = {4: 'leader', 3: 'co-leader', 2: 'elder', 1: 'member', 0: 'not-in-clan'}
     while True:
         logger.debug('Updating discord roles')
-        clashRole = 0
         try:
-            # Snapshot the mapping, /claimaccount can add to it while this loop awaits
-            for member_id, acc in list(discordTagMapping.items()):
-                guild = bot.get_guild(int(content['discordGuildID']))
-                member = guild.get_member(member_id) if guild else None  # get_member is on Guild, not Client in discord.py 2.x
-                if member:
-                    clashRole = await acc.updateRole(cc)
-                if clashRole == 4 and member:
-                    await userRoleUpdate('leader', member)
-                elif clashRole == 3 and member:
-                    await userRoleUpdate('co-leader', member)
-                elif clashRole == 2 and member:
-                    await userRoleUpdate('elder', member)
-                elif clashRole == 1 and member:
-                    await userRoleUpdate('member', member)
-                elif clashRole == 0 and member:
-                    await userRoleUpdate('not-in-clan', member)
-                clashRole = 0
+            guild = bot.get_guild(int(content['discordGuildID']))
+            if not guild:
+                logger.warning('Guild not found, skipping role update')
+            else:
+                # Snapshot the mapping, /claimaccount can add to it while this loop awaits
+                for member_id, acc in list(discordTagMapping.items()):
+                    member = guild.get_member(member_id)  # get_member is on Guild, not Client in discord.py 2.x
+                    if not member:
+                        continue
+                    try:
+                        clashRole = await acc.updateRole(cc)
+                        await userRoleUpdate(clashRoleNames[clashRole], member)
+                    except (coc.Maintenance, coc.GatewayError, aiohttp.client_exceptions.ClientConnectorError):
+                        raise  # API is unreachable, give up on this pass
+                    except Exception as e:
+                        logger.warning(f'Failed to update role for {member.name} ({member_id}): {e!r}')
         except coc.Maintenance:
             logger.warning('CoC API under maintenance. Trying again in 5 minutes.')
         except coc.GatewayError:
@@ -369,7 +375,7 @@ async def assignRoles():
 # Add ! commands for hidden commands
 @bot.event
 async def on_message(ctx):
-    if ctx.author.id == int(content['discordOwnerID']):
+    if isOwner(ctx.author.id):
         if ctx.content.startswith('!coc-bot'):
             if ctx.content[9:] == 'version':
                 await ctx.channel.send(f'Version: {__version__}')
