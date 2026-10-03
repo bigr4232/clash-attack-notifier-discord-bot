@@ -18,7 +18,9 @@ content = config_loader.loadYaml()
 updateAccounts()
 availableRoles = {'leader', 'co-leader', 'elder', 'member', 'not-in-clan'}
 roles = {'leader':0, 'co-leader':0, 'elder':0, 'member':0, 'not-in-clan':0}
-errorRestart = False
+# Wars that already had their "war has started" DMs handled, and reminders already sent, keyed by warKey()
+startNotifiedWars = set()
+sentReminders = set()
 
 # Background task handles, kept so the tasks aren't garbage-collected and can be restarted
 background_tasks = {}
@@ -79,9 +81,23 @@ async def startWarSearch(cc):
             logger.error(f'War search task crashed unexpectedly: {e}. Restarting in 30s.', exc_info=True)
             await asyncio.sleep(30)
 
+# Identifies a war across API fetches
+def warKey(war):
+    return (content['clanTag'], war.start_time.raw_time)
+
+# Fetch the current war, retrying transient API/network errors before giving up
+async def fetchWarWithRetry(cc, attempts=10, delay=30):
+    for attempt in range(1, attempts + 1):
+        try:
+            return await cc.get_current_war(content['clanTag'])
+        except Exception as e:
+            if attempt == attempts:
+                raise
+            logger.warning(f'Failed to fetch current war (attempt {attempt}/{attempts}): {e}. Retrying in {delay}s.')
+            await asyncio.sleep(delay)
+
 # Runs on prep day, calls start if cwl
 async def new_war_prep(cc, firstRun):
-    global errorRestart
     try:
         war = await cc.get_current_war(content['clanTag'])
         if war == None:
@@ -93,60 +109,48 @@ async def new_war_prep(cc, firstRun):
                 await asyncio.sleep(max(30, war.start_time.seconds_until))
                 war = await cc.get_current_war(content['clanTag'])
             if war is not None and war.state == 'inWar':
-                await new_war_start(cc, firstRun)
+                # The bot was running before battle day began, so start DMs should go out
+                await new_war_start(cc, war, False)
         elif war.state == 'inWar':
-            await new_war_start(cc, firstRun)
+            await new_war_start(cc, war, firstRun)
     except coc.Maintenance:
         logger.warning('CoC API under maintenance - waiting for recovery')
-        errorRestart = True
         await asyncio.sleep(300)
         return
     except coc.GatewayError:
         logger.warning('Gateway error - waiting for recovery')
-        errorRestart = True
         await asyncio.sleep(300)
         return
     except aiohttp.client_exceptions.ClientConnectorDNSError as e:
         logger.warning(f'DNS resolution failed: {e}. Waiting 60s before retry.')
-        errorRestart = True
         await asyncio.sleep(60)
         return
     except aiohttp.client_exceptions.ClientConnectorError as e:
         logger.warning(f'Connection error: {e}. Waiting 30s before retry.')
-        errorRestart = True
         await asyncio.sleep(30)
         return
 
 # Runs on war day
-async def new_war_start(cc, firstRun):
-    try:
-        war = await cc.get_current_war(content['clanTag'])
-        if war.state == 'inWar':
-            numAttacks = str(war.attacks_per_member)
-            logger.debug('adding players to list')
-            playersMissingAttacks.clear()
-            notifiedPlayers = set()
-            notifiedPlayers.clear()
-            global errorRestart
-            for member in war.members:
-                if member.clan.tag == content['clanTag']:
-                    playersMissingAttacks.add(member.tag)
-                    acc = clashTagMapping.get(member.tag)  # O(1) lookup instead of O(M) inner loop
-                    if acc and acc not in notifiedPlayers:
-                        if war.end_time.seconds_until > 82800 and not firstRun and not errorRestart:
-                            timeleft = returnTime(war.end_time.seconds_until)
-                            await notifyUserStart(acc.discordID, numAttacks, timeleft)
-                        notifiedPlayers.add(acc)
-            logger.debug('starting notifier')
-            errorRestart = False
-            await war_notifier(war, cc)
-            return False
-        return True
-    except Exception as e:
-        logger.error(f'War start check failed: {e}. Waiting 60s before retry.')
-        errorRestart = True
-        await asyncio.sleep(60)
-        return True
+async def new_war_start(cc, war, firstRun):
+    key = warKey(war)
+    numAttacks = str(war.attacks_per_member)
+    # DM "war has started" once per war, only in the first hour, and not if the bot came up mid-war
+    sendStartDMs = key not in startNotifiedWars and not firstRun and war.end_time.seconds_until > 82800
+    startNotifiedWars.add(key)
+    timeleft = returnTime(war.end_time.seconds_until)
+    logger.debug('adding players to list')
+    playersMissingAttacks.clear()
+    notifiedPlayers = set()
+    for member in war.members:
+        if member.clan.tag == content['clanTag']:
+            playersMissingAttacks.add(member.tag)
+            acc = clashTagMapping.get(member.tag)  # O(1) lookup instead of O(M) inner loop
+            if acc and acc not in notifiedPlayers:
+                if sendStartDMs:
+                    await notifyUserStart(acc.discordID, numAttacks, timeleft)
+                notifiedPlayers.add(acc)
+    logger.debug('starting notifier')
+    await war_notifier(war, cc)
 
 # Remove users who have attacked from players list
 async def removeFinishedAttackers(cc, war=None):
@@ -179,45 +183,39 @@ def returnTime(seconds):
     logger.debug(f'time: {remainingTime}')
     return remainingTime
 
-# Update the players list and notify users that haven't attacked
-# Wait in asyncio.sleep for amount of time passed in
-async def updateAndNotify(cc, time, timeLeft):
+# Sleep until `interval` seconds before the war ends, then remind everyone who still has attacks left
+async def updateAndNotify(cc, war, interval):
     logger.debug('waiting till next notification interval')
-    war = await cc.get_current_war(content['clanTag'])
-    if war.end_time.seconds_until - time >= 0:
-        await asyncio.sleep(war.end_time.seconds_until - time)
-    war = await cc.get_current_war(content['clanTag'])
+    await asyncio.sleep(max(0, war.end_time.seconds_until - interval))
+    # Retry transient API errors so a blip at reminder time doesn't drop the reminder
+    war = await fetchWarWithRetry(cc)
+    if war is None or war.state != 'inWar':
+        logger.debug('War is no longer in battle day, skipping reminder')
+        return
     timeLeft = war.end_time.seconds_until
     logger.debug(f'notify with time {timeLeft}')
     await removeFinishedAttackers(cc, war)
     remainingTime = returnTime(timeLeft)
     notifiedPlayers = set()
     logger.debug('send notifications')
-    for tag in playersMissingAttacks:
+    for tag in list(playersMissingAttacks):
         acc = clashTagMapping.get(tag)  # O(1) lookup instead of O(M) inner loop
         if acc and acc not in notifiedPlayers:
             await notifyUserAttackTime(acc.discordID, remainingTime)
             notifiedPlayers.add(acc)
-    notifiedPlayers.clear()
-    timeLeft = war.end_time.seconds_until  # Reuse existing war object instead of fetching again
-    return timeLeft
 
 # Sends notifications to players who haven't attacked at each interval
 async def war_notifier(war, cc):
     try:
+        key = warKey(war)
         notificationIntervals = [43200, 18000, 10800, 7200, 3600, 1800, 900]
-        actualTime = war.end_time.seconds_until
-        for time in notificationIntervals:
-            if actualTime > time:
-                actualTime = await updateAndNotify(cc, time, actualTime)
-        await asyncio.sleep(1000)
-        war = await cc.get_current_war(content['clanTag'])
-        if war != None:
-            timeleft = war.end_time.seconds_until
-            while war.state == 'inWar' and timeleft <= actualTime:
-                timeleft = war.end_time.seconds_until
-                await asyncio.sleep(300)
-                war = await cc.get_current_war(content['clanTag'])
+        for interval in notificationIntervals:
+            # Skip reminders whose time already passed or that were already sent for this war
+            if war.end_time.seconds_until > interval and (key, interval) not in sentReminders:
+                await updateAndNotify(cc, war, interval)
+                sentReminders.add((key, interval))
+        # Wait out the rest of the war so the search loop doesn't pick this war up again
+        await asyncio.sleep(max(0, war.end_time.seconds_until) + 60)
     except Exception as e:
         logger.error(f'War notifier crashed unexpectedly: {e}. War notifications may be incomplete.', exc_info=True)
     
