@@ -85,11 +85,29 @@ async def startWarSearch(cc):
 def warKey(war):
     return (content['clanTag'], war.start_time.raw_time)
 
+# Get the clan's current war. coc.py picks the CWL round by position (it assumes the newest listed
+# round is in preparation), so when the next round's war tags aren't published yet it hands back the
+# round that already ended. In that case look through the recent rounds for the one actually live.
+async def getCurrentWar(cc):
+    war = await cc.get_current_war(content['clanTag'])
+    if war is None or not war.is_cwl or war.state in ('inWar', 'preparation'):
+        return war
+    group = war.league_group or await cc.get_league_group(content['clanTag'])
+    prepWar = None
+    for warTags in reversed(group.rounds[-3:]):
+        async for leagueWar in cc.get_league_wars(warTags, clan_tag=content['clanTag']):
+            if leagueWar.state == 'inWar':
+                logger.debug('Found the CWL round in battle day')
+                return leagueWar
+            if leagueWar.state == 'preparation' and prepWar is None:
+                prepWar = leagueWar
+    return prepWar or war
+
 # Fetch the current war, retrying transient API/network errors before giving up
 async def fetchWarWithRetry(cc, attempts=10, delay=30):
     for attempt in range(1, attempts + 1):
         try:
-            return await cc.get_current_war(content['clanTag'])
+            return await getCurrentWar(cc)
         except Exception as e:
             if attempt == attempts:
                 raise
@@ -99,15 +117,17 @@ async def fetchWarWithRetry(cc, attempts=10, delay=30):
 # Runs on prep day, calls start if cwl
 async def new_war_prep(cc, firstRun):
     try:
-        war = await cc.get_current_war(content['clanTag'])
+        war = await getCurrentWar(cc)
         if war == None:
+            logger.debug('No current war found (not in war, or CWL between rounds)')
             return
+        logger.debug(f'War state: {war.state!r}, cwl: {war.is_cwl}')
         if war.state == 'preparation':
             logger.debug('In preparation')
             # Wait for battle day. Sleep at least 30s per pass so short wars or clock skew can't busy-loop the API
             while war is not None and war.state == 'preparation':
                 await asyncio.sleep(max(30, war.start_time.seconds_until))
-                war = await cc.get_current_war(content['clanTag'])
+                war = await getCurrentWar(cc)
             if war is not None and war.state == 'inWar':
                 # The bot was running before battle day began, so start DMs should go out
                 await new_war_start(cc, war, False)
@@ -156,7 +176,7 @@ async def new_war_start(cc, war, firstRun):
 async def removeFinishedAttackers(cc, war=None):
     logger.debug('remove users who have attacked')
     if war is None:
-        war = await cc.get_current_war(content['clanTag'])
+        war = await getCurrentWar(cc)
     for p in war.members:
         if p.clan.tag == content['clanTag']:
             if len(p.attacks) == war.attacks_per_member:
