@@ -364,3 +364,25 @@ class TestUpdateAccounts:
             discord_id = acc.discordID
             if discord_id in discordTagMapping:
                 assert discordTagMapping[discord_id] == acc
+
+
+class TestUpdateAccountsReassignment:
+    """Tests for updateAccounts() when a tag is claimed by a different Discord user."""
+    
+    def test_reclaimed_tag_removed_from_previous_owner(self, monkeypatch):
+        """A tag claimed by user 2 should be removed from user 1's accountLink."""
+        import account_linker
+        
+        monkeypatch.setattr(account_linker, 'clashTagMapping', {})
+        monkeypatch.setattr(account_linker, 'discordTagMapping', {})
+        monkeypatch.setattr(account_linker, 'discordAccounts', set())
+        monkeypatch.setattr(account_linker.config_loader, 'loadYaml', lambda: {'clanMembers': {'#TAG1': 1}})
+        
+        account_linker.updateAccounts()
+        
+        # Same tag now claimed by a different Discord user
+        monkeypatch.setattr(account_linker.config_loader, 'loadYaml', lambda: {'clanMembers': {'#TAG1': 2}})
+        account_linker.updateAccounts()
+        
+        assert account_linker.clashTagMapping['#TAG1'].discordID == 2
+        assert '#TAG1' not in account_linker.discordTagMapping[1].tags

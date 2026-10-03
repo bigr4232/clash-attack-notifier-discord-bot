@@ -50,6 +50,10 @@ def updateAccounts():
     clanMembers = content.get('clanMembers') or {}
     for clashid in clanMembers.keys():
         discord_id = clanMembers[clashid]
+        # A tag reclaimed by another user no longer belongs to its previous owner
+        previous = clashTagMapping.get(clashid)
+        if previous and previous.discordID != discord_id:
+            previous.tags.pop(clashid, None)
         existing = discordTagMapping.get(discord_id)
         if existing:
             existing.addClashTagTarget(clashid, [])
