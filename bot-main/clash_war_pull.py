@@ -11,7 +11,7 @@ from account_linker import discordTagMapping, clashTagMapping, updateAccounts
 import time
 
 # Globals
-__version__ = '1.1.14'
+__version__ = '1.1.22'
 playersMissingAttacks = set()
 clan_tags = list()
 content = config_loader.loadYaml()
