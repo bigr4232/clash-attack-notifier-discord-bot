@@ -1,5 +1,6 @@
 import os
 import yaml
+import coc
 
 _CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.yaml')
 
@@ -12,8 +13,8 @@ def loadYaml():
     return content
 
 def addUser(discordName, clashTag):
-    if clashTag[0] != '#':
-        clashTag = f'#{clashTag}'
+    # Store tags the way the API returns them, e.g. '#859404klj' -> '#859404KLJ'
+    clashTag = coc.utils.correct_tag(clashTag)
     with open(_CONFIG_PATH, 'r') as config:
         content = yaml.safe_load(config)
         if content.get('clanMembers') == None:

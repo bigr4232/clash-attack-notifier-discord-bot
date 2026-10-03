@@ -386,3 +386,16 @@ class TestUpdateAccountsReassignment:
         
         assert account_linker.clashTagMapping['#TAG1'].discordID == 2
         assert '#TAG1' not in account_linker.discordTagMapping[1].tags
+    
+    def test_claimed_tag_normalized_to_uppercase(self, monkeypatch):
+        """A lowercase claim should be stored normalized, the way the API returns tags."""
+        import account_linker
+        
+        monkeypatch.setattr(account_linker, 'clashTagMapping', {})
+        monkeypatch.setattr(account_linker, 'discordTagMapping', {})
+        monkeypatch.setattr(account_linker, 'discordAccounts', set())
+        monkeypatch.setattr(account_linker.config_loader, 'loadYaml', lambda: {'clanMembers': {'#abc123': 5}})
+        
+        account_linker.updateAccounts()
+        
+        assert '#ABC123' in account_linker.clashTagMapping

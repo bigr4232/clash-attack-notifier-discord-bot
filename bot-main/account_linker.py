@@ -48,8 +48,8 @@ def updateAccounts():
     global content
     content = config_loader.loadYaml()
     clanMembers = content.get('clanMembers') or {}
-    for clashid in clanMembers.keys():
-        discord_id = clanMembers[clashid]
+    for clashid, discord_id in clanMembers.items():
+        clashid = coc.utils.correct_tag(clashid)
         # A tag reclaimed by another user no longer belongs to its previous owner
         previous = clashTagMapping.get(clashid)
         if previous and previous.discordID != discord_id:
