@@ -88,12 +88,12 @@ async def new_war_prep(cc, firstRun):
             return
         if war.state == 'preparation':
             logger.debug('In preparation')
-            inPrep = True
-            while inPrep:
-                sleep_time = max(0, war.end_time.seconds_until - 86400)
-                await asyncio.sleep(sleep_time)
-                inPrep = await new_war_start(cc, firstRun)
+            # Wait for battle day. Sleep at least 30s per pass so short wars or clock skew can't busy-loop the API
+            while war is not None and war.state == 'preparation':
+                await asyncio.sleep(max(30, war.start_time.seconds_until))
                 war = await cc.get_current_war(content['clanTag'])
+            if war is not None and war.state == 'inWar':
+                await new_war_start(cc, firstRun)
         elif war.state == 'inWar':
             await new_war_start(cc, firstRun)
     except coc.Maintenance:
