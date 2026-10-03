@@ -73,10 +73,10 @@ async def startWarSearch(cc):
             logger.debug('Checking war status')
             await new_war_prep(cc, firstRun)
             firstRun = False
-            logger.debug('Checking again in 5 minutes')
+            logger.debug('Checking again in 10 minutes')
             await asyncio.sleep(600)
         except Exception as e:
-            logger.error(f'War search task crashed unexpectedly: {e}. Restarting in 30s.')
+            logger.error(f'War search task crashed unexpectedly: {e}. Restarting in 30s.', exc_info=True)
             await asyncio.sleep(30)
 
 # Runs on prep day, calls start if cwl
@@ -219,7 +219,7 @@ async def war_notifier(war, cc):
                 await asyncio.sleep(300)
                 war = await cc.get_current_war(content['clanTag'])
     except Exception as e:
-        logger.error(f'War notifier crashed unexpectedly: {e}. War notifications may be incomplete.')
+        logger.error(f'War notifier crashed unexpectedly: {e}. War notifications may be incomplete.', exc_info=True)
     
 # Command to claim clash account. With no input of username, will use discord name from command issuer
 @tree.command(name='claimaccount', description='claim clash account with tag and discord name')
@@ -335,15 +335,15 @@ async def updateRoles(cc):
                     await userRoleUpdate('not-in-clan', member)
                 clashRole = 0
         except coc.Maintenance:
-            logger.debug('CoC API under maintenance. Trying again in 5 minutes.')
+            logger.warning('CoC API under maintenance. Trying again in 5 minutes.')
         except coc.GatewayError:
-            logger.debug('Gateway error, retrying in 5 minutes.')
+            logger.warning('Gateway error, retrying in 5 minutes.')
         except aiohttp.client_exceptions.ClientConnectorDNSError as e:
             logger.warning(f'DNS resolution failed during role update: {e}. Retrying in 5 minutes.')
         except aiohttp.client_exceptions.ClientConnectorError as e:
             logger.warning(f'Connection error during role update: {e}. Retrying in 5 minutes.')
         except Exception as e:
-            logger.debug(f'Exception found\n{e}')
+            logger.error(f'Role update failed: {e}. Retrying in 5 minutes.', exc_info=True)
         await asyncio.sleep(300)
 
 # Assign roles to user
