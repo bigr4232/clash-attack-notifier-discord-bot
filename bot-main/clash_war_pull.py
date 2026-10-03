@@ -261,28 +261,30 @@ async def sendWelcomeCommand(ctx:discord.Interaction, username:str):
 # Send dm to user that war has started
 @bot.event
 async def notifyUserStart(userid:int, numattacks:str, remainingtime:str):
-    user = await bot.fetch_user(userid)
-    logger.debug(f'Notifying {user.name} war has started')
+    # Never raise: one bad user must not stop notifications for the rest
     try:
+        user = await bot.fetch_user(userid)
+        logger.debug(f'Notifying {user.name} war has started')
         if not silentMode:
             await user.send(f'War has started and you are in it. You have {remainingtime}to attack {numattacks} times')
     except discord.Forbidden:
-        logger.info(f'{user.name} has DMs disabled, cannot send notification')
-    except discord.HTTPException as e:
-        logger.error(f'Failed to notify {user.name}: {e}')
+        logger.info(f'User {userid} has DMs disabled, cannot send notification')
+    except Exception as e:
+        logger.error(f'Failed to notify user {userid} that war started: {e!r}')
 
 # Send dm to user to get attack in
 @bot.event
 async def notifyUserAttackTime(userid:int, remainingtime:str):
-    user = await bot.fetch_user(userid)
-    logger.debug(f'notifying {user.name} to get attack in')
+    # Never raise: one bad user must not stop notifications for the rest
     try:
+        user = await bot.fetch_user(userid)
+        logger.debug(f'notifying {user.name} to get attack in')
         if not silentMode:
             await user.send(f'{remainingtime}to get attack in')
     except discord.Forbidden:
-        logger.info(f'{user.name} has DMs disabled, cannot send notification')
-    except discord.HTTPException as e:
-        logger.error(f'Failed to notify {user.name}: {e}')
+        logger.info(f'User {userid} has DMs disabled, cannot send notification')
+    except Exception as e:
+        logger.error(f'Failed to send attack reminder to user {userid}: {e!r}')
 
 # Send message to new member
 @bot.event
