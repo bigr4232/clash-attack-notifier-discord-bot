@@ -103,15 +103,18 @@ async def getCurrentWar(cc):
                 prepWar = leagueWar
     return prepWar or war
 
-# Fetch the current war, retrying transient API/network errors before giving up
-async def fetchWarWithRetry(cc, attempts=10, delay=30):
-    for attempt in range(1, attempts + 1):
+# Fetch the current war, retrying API/network errors until `war` has only `giveUpAt` seconds left.
+# CoC API outages can last hours, so a fixed number of retries isn't enough.
+async def fetchWarWithRetry(cc, war, giveUpAt, delay=30):
+    attempt = 0
+    while True:
+        attempt += 1
         try:
             return await getCurrentWar(cc)
         except Exception as e:
-            if attempt == attempts:
+            if war.end_time.seconds_until - delay <= giveUpAt:
                 raise
-            logger.warning(f'Failed to fetch current war (attempt {attempt}/{attempts}): {e}. Retrying in {delay}s.')
+            logger.warning(f'Failed to fetch current war (attempt {attempt}): {e}. Retrying in {delay}s.')
             await asyncio.sleep(delay)
 
 # Runs on prep day, calls start if cwl
@@ -203,12 +206,12 @@ def returnTime(seconds):
     logger.debug(f'time: {remainingTime}')
     return remainingTime
 
-# Sleep until `interval` seconds before the war ends, then remind everyone who still has attacks left
-async def updateAndNotify(cc, war, interval):
+# Sleep until `interval` seconds before the war ends, then remind everyone who still has attacks left.
+# If the API is down, keep retrying until the next reminder (`nextInterval`) is due and send this one late.
+async def updateAndNotify(cc, war, interval, nextInterval):
     logger.debug('waiting till next notification interval')
     await asyncio.sleep(max(0, war.end_time.seconds_until - interval))
-    # Retry transient API errors so a blip at reminder time doesn't drop the reminder
-    war = await fetchWarWithRetry(cc)
+    war = await fetchWarWithRetry(cc, war, nextInterval)
     if war is None or war.state != 'inWar':
         logger.debug('War is no longer in battle day, skipping reminder')
         return
@@ -229,10 +232,15 @@ async def war_notifier(war, cc):
     try:
         key = warKey(war)
         notificationIntervals = [43200, 18000, 10800, 7200, 3600, 1800, 900]
-        for interval in notificationIntervals:
+        for i, interval in enumerate(notificationIntervals):
+            nextInterval = notificationIntervals[i + 1] if i + 1 < len(notificationIntervals) else 0
             # Skip reminders whose time already passed or that were already sent for this war
             if war.end_time.seconds_until > interval and (key, interval) not in sentReminders:
-                await updateAndNotify(cc, war, interval)
+                try:
+                    await updateAndNotify(cc, war, interval, nextInterval)
+                except Exception as e:
+                    # Keep going so the later reminders still go out
+                    logger.error(f'Skipped the reminder for {returnTime(interval)}: {e!r}', exc_info=True)
                 sentReminders.add((key, interval))
         # Wait out the rest of the war so the search loop doesn't pick this war up again
         await asyncio.sleep(max(0, war.end_time.seconds_until) + 60)
